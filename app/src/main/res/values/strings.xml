@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Inventario EFA</string>
+    <string name="title_activity_create_ubication">CreateUbication</string>
+    <string name="title_activity_create_article">CreateArticle</string>
+    <string name="title_activity_create_personnel_category">CreatePersonnelCategory</string>
+    <string name="title_activity_main_auth">MainAuth</string>
+    <string name="title_activity_article_info">ArticleInfo</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="title_activity_main_activityç">MainActivityç</string>
+</resources>
