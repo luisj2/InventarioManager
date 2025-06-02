@@ -111,6 +111,7 @@ fun InventoryDataScreen(
     //Lists
     val articleListResult by articleViewModel.allArticlesList.collectAsState()
     val ubicationListResult by ubicationViewModel.allUbicationsList.collectAsState()
+    val ubicationRegisterStatus by ubicationViewModel.insertUbicationStatus.collectAsState()
 
 
     val originalArticleList = if (articleListResult is SuspendResult.Success) {
@@ -135,6 +136,10 @@ fun InventoryDataScreen(
         ).handleErrors { message->
             context.toast(message)
         }
+    }
+
+    LaunchedEffect(ubicationRegisterStatus){
+        if(ubicationRegisterStatus is SuspendResult.Success) context.toast("Ubicacion registada correctamente")
     }
 
 
@@ -694,7 +699,7 @@ private fun InventarySearchBar(
                 )
             },
             textStyle = MaterialTheme.typography.bodyLarge.copy(
-                color = Color.Black 
+                color = Color.Black
             ),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
