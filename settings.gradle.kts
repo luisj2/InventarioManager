@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Inventario EFA"
+rootProject.name = "Inventario Manager"
 include(":app")
  

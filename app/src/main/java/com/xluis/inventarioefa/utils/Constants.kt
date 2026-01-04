@@ -2,33 +2,55 @@ package com.xluis.inventarioefa.utils
 
 
 //FIRESTORE Collections
-const val FIRESTORE_ARTICLE_COLLECTION = "articles"
-const val FIRESTORE_ARTICLE_TAKED_ARTICLE_SUBCOLLECTION = "takedArticles"
-const val FIRESTORE_RETURN_ARTICLE_SUBCOLLECTION = "returnArticles"
+
 
 const val FIRESTORE_UBICATION_COLLECTION = "ubications"
 
 const val FIRESTORE_USER_COLLECTION = "user"
-const val FIRESTORE_USER_TAKED_ARTICLE_SUBCOLLECTION = "takedArticles"
-const val FIRESTORE_USER_RETURN_ARTICLE_SUBCOLLECTION = "returnArticles"
 
 
-//FIRESTORE Article Fields
-const val FIRESTORE_ARTICLE_NAME = "name"
+const val FIRESTORE_ZONES_COLLECTION = "zones"
+const val FIRESTORE_ZONES_ARTICLE_SUBCOLLECTION = "articles"
+const val FIRESTORE_ZONES_MOVEMENTS_SUBCOLLECTION = "articlesMovements"
+
+
+//FIRESTORE ArticleFirestore Fields
+const val FIRESTORE_ARTICLE_NAME_FIRESTORE = "name"
 const val FIRESTORE_ARTICLE_COUNT = "count"
-
-//ArticleTaked Fields
-const val FIRESTORE_ARTICLE_ARTICLE_TAKED_BASE_ID_FIELD = "baseId"
-const val FIRESTORE_ARTICLE_ARTICLE_TAKED_COUNT_FIELD = "articlesTakedCount"
-const val FIRESTORE_ARTICLE_ARTICLE_RETURN_COUNT_FIELD = "articlesReturnCount"
-
-//ArticleReturn Fields
-const val FIRESTORE_ARTICLE_ARTICLE_RETURN_BASE_ID_FIELD = "baseId"
+const val FIRESTORE_ARTICLE_ZONEID = "zoneId"
 
 
-//Firestore Ubication Fields
-const val FIRESTORE_UBICATION_NAME_FIELD = "name"
 
 
-//Firestore User Fields
-const val FIRESTORE_USER_TAKED_ARTICLE_COUNT_FIELD = "articlesTakedCount"
+
+
+
+//Firestore UserFirestore Fields
+const val FIRESTORE_USER_TAKED_ARTICLE_COUNT_FIELD_FIRESTORE = "articlesTakedCount"
+const val FIRESTORE_USER_ZONES_LIST_FIELD = "zonesIdList"
+const val FIRESTORE_USER_MOVEMENTS_LIST_FIELD = "movementsIdList"
+const val FIRESTORE_USER_USERNAME_FIELD = "userName"
+const val FIRESTORE_USER_REQUESTS_FIELD = "requests"
+const val FIRESTORE_USER_EMAIL_FIELD = "email"
+//Firestore com.xluis.inventarioefa.data.Model.Zone.ZoneFirestore Fields
+const val FIRESTORE_ZONE_CHILD_LIST_FIELD_FIRESTORE = "childIdList"
+const val FIRESTORE_ZONE_MEMEBERS_FIELD = "membersId"
+const val FIRESTORE_ZONE_OWNER_FIELD = "ownerId"
+const val FIRESTORE_ZONE_PARENT_LIST_FIELD = "parentIdList"
+const val FIRESTORE_ZONE_NAME_FIELD = "name"
+
+
+//Firestore Movements Fields
+const val FIRESTORE_MOVEMENTS_ZONEID_FIELD = "zoneId"
+const val FIRESTORE_MOVEMENTS_USERID_FIELD = "userId"
+
+//DATASTORE
+//USER DATASTORE
+const val USER_PREFS_KEY = "user_prefs"
+const val USER_DATASTORE_UID = "user_uid"
+
+//OTHER
+const val SVG_CODE = "image/svg+xml"
+const val YOUR_MOVEMENT_ROOM = "Tu"
+const val SELECTED_ARTICLES_KEY = "selected_articles"
+const val SELECTED_MOVEMENTS_KEY = "selected_movements"

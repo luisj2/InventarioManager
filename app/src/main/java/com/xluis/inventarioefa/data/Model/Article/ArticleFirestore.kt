@@ -1,0 +1,19 @@
+package com.xluis.inventarioefa.data.Model.Article
+
+import java.util.UUID
+
+data class ArticleFirestore(
+    var id : String? = null,
+    val name : String = "",
+    val category : String = "",
+    val zoneId : String? = null,
+    var count : Int = 1,
+){
+    init {
+        if(id == null && name.isNotBlank()){
+            val cleanName = name.uppercase().replace(" ", "_").replace(Regex("[^A-Z0-9_]"), "")
+            val shortId = UUID.randomUUID().toString().take(5)
+            id = "Firestore-$cleanName-$shortId"
+        }
+    }
+}

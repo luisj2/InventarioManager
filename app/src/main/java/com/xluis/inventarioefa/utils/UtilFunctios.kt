@@ -3,21 +3,17 @@ package com.xluis.inventarioefa.utils
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Bundle
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
-import com.xluis.inventarioefa.domain.model.DataClass.Article.ArticleMovements.ArticleReturn
-import com.xluis.inventarioefa.domain.model.DataClass.Article.ArticleMovements.ArticleTaked
+import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import java.text.SimpleDateFormat
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 fun Context.navigateTo(destinationClass: Class<out Activity>, bundle: Bundle = bundleOf()) {
     val activityContext = this as? Activity
@@ -36,6 +32,19 @@ fun Context.navigateTo(destinationClass: Class<out Activity>, bundle: Bundle = b
     }
 }
 
+fun Context.hasConexion(): Boolean {
+    val connectivityManager =
+        this.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    val network = connectivityManager.activeNetwork ?: return false
+    val capabilities =
+        connectivityManager.getNetworkCapabilities(network) ?: return false
+
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            && capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+}
+
+
 
 fun String.parseDate () : Date{
     return try {
@@ -46,17 +55,6 @@ fun String.parseDate () : Date{
     }
 }
 
-fun ArticleTaked.toArticleReturned(): ArticleReturn {
-    return ArticleReturn(
-        userName = this.userName,
-        articleCategory = this.articleCategory,
-        articleName = this.articleName,
-        date = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy")),
-        articleId = this.articleId,
-        userId = this.userId,
-        articlesReturnCount = this.articlesTakedCount
-    )
-}
 
 fun Array<out SuspendResult<*>>.handleErrors(showMessage: (String) -> Unit) {
     this.forEach { result ->
@@ -85,10 +83,27 @@ fun isValidEmail(email: String?): Boolean {
     val emailRegex = "^[A-Za-z](.*)([@]{1})(.+)(\\.)(.+)"
     return Regex(emailRegex).matches(email)
 }
-fun isValidPassword(password: String?): Boolean {
-    if (password.isNullOrBlank()) return false
+fun validatePassword(password: String?): ValidationResult {
+    if (password.isNullOrBlank()) {
+        return ValidationResult.Error("La contraseña no puede estar vacía")
+    }
+
     val passwordRegex = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$"
-    return Regex(passwordRegex).matches(password)
+    return if (!Regex(passwordRegex).matches(password)) {
+        ValidationResult.Error(
+            "La contraseña debe tener al menos 8 caracteres e incluir letras y números"
+        )
+    } else {
+        ValidationResult.Success
+    }
 }
+
+
+
+
+
+
+
+
 
 
