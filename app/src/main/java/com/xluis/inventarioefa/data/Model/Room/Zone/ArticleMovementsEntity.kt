@@ -14,12 +14,6 @@ import java.time.LocalDateTime
             parentColumns = ["id"],
             childColumns = ["zoneId"],
             onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = ArticleZoneEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["articleId"],
-            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [
@@ -29,7 +23,7 @@ import java.time.LocalDateTime
 )
 data class ArticleMovementsEntity(
     @PrimaryKey(autoGenerate = true) var id: Long = 0,
-    var articleId: String,
+    var articleId: Long,
     var articleName: String,
     var zoneId: Long,
     var zoneName : String,

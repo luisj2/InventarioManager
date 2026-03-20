@@ -29,29 +29,34 @@ import androidx.compose.ui.unit.dp
 import com.xluis.inventarioefa._domain.model.User.ZoneRequest
 import com.xluis.inventarioefa.utils.LoadingIndicator
 import com.xluis.inventarioefa.utils.toast
+import toReadableDateTime
 
 
 @Composable
 fun ZoneRequestsScreen(
-    viewModel : ZoneRequestsViewModel
-){
+    viewModel: ZoneRequestsViewModel
+) {
     val uiState by viewModel.uiState
     val context = LocalContext.current
 
     LaunchedEffect(Unit){
-        viewModel.uiEffect.collect{effect->
-            when(effect){
+        viewModel.onEvent(ZoneRequestsUiEvent.ChargeUserZoneRequests)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.uiEffect.collect { effect ->
+            when (effect) {
                 is ZoneRequestsUiEffect.showToast -> context.toast(effect.message)
             }
         }
     }
 
-    if(uiState.isLoading){
+    if (uiState.isLoading) {
         LoadingIndicator()
     }
     ZoneRequestsContent(
         uiState = uiState,
-        onEvent = {event-> viewModel.onEvent(event)}
+        onEvent = { event -> viewModel.onEvent(event) }
     )
 
 }
@@ -59,9 +64,8 @@ fun ZoneRequestsScreen(
 @Composable
 fun ZoneRequestsContent(
     uiState: ZoneRequestsUiState,
-    onEvent : (event : ZoneRequestsUiEvent) -> Unit
+    onEvent: (event: ZoneRequestsUiEvent) -> Unit
 ) {
-    // Si no hay solicitudes, mostramos un mensaje
     if (uiState.requestsList.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -79,8 +83,14 @@ fun ZoneRequestsContent(
         items(uiState.requestsList) { request ->
             ZoneRequestItem(
                 request = request,
-                onAccept = {zoneRequest ->  onEvent(ZoneRequestsUiEvent.AcceptZoneRequest(zoneRequest))},
-                onReject = {requestId ->  onEvent(ZoneRequestsUiEvent.RejectZoneRequest(requestId))}
+                onAccept = { zoneRequest ->
+                    onEvent(
+                        ZoneRequestsUiEvent.AcceptZoneRequest(
+                            zoneRequest
+                        )
+                    )
+                },
+                onReject = { requestId -> onEvent(ZoneRequestsUiEvent.RejectZoneRequest(requestId)) }
             )
         }
     }
@@ -89,8 +99,8 @@ fun ZoneRequestsContent(
 @Composable
 fun ZoneRequestItem(
     request: ZoneRequest,
-    onAccept : (zoneRequest : ZoneRequest) -> Unit,
-    onReject : (requestId : String) -> Unit
+    onAccept: (zoneRequest: ZoneRequest) -> Unit,
+    onReject: (requestId: String) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -107,16 +117,16 @@ fun ZoneRequestItem(
         ) {
             Column {
                 Text(
-                    text = "Usuario: ${request.requesterId}",
+                    text = "Usuario: ${request.requesterName}",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = "Zona: ${request.zoneId}",
+                    text = "Zona: ${request.zoneName}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Creada: ${request.createdAt}",
+                    text = "Creada: ${request.createdAt.toReadableDateTime()}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

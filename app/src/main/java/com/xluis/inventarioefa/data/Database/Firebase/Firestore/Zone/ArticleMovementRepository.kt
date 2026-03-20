@@ -5,11 +5,14 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.xluis.inventarioefa._domain.Repository.Firebase.Firestore.Zone.ArticleMovementQuery
 import com.xluis.inventarioefa.data.Database.Firebase.Firestore.BaseFirestoreRepository
-import com.xluis.inventarioefa.data.Model.Movement.ArticleMovementFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Movement.ArticleMovementFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.utils.FIRESTORE_MOVEMENTS_ZONEID_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_COLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_MOVEMENTS_SUBCOLLECTION
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class ArticleMovementRepository(
@@ -50,6 +53,26 @@ class ArticleMovementRepository(
             val snapshot = getMovementsCollection(zoneId).get().await()
             snapshot.toObjects(ArticleMovementFirestore::class.java)
         }
+    }
+
+    override fun getMovementListByZoneIdFlow(zoneId: String): Flow<List<ArticleMovementFirestore>> = callbackFlow {
+
+        val listener = getMovementsCollection(zoneId)
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val movements = snapshot
+                    ?.toObjects(ArticleMovementFirestore::class.java)
+                    ?: emptyList()
+
+                trySend(movements).isSuccess
+            }
+
+        awaitClose { listener.remove() }
     }
 
     override suspend fun deleteMovementsByZoneId(zoneId: String): SuspendResult<Boolean> {

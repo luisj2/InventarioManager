@@ -85,7 +85,8 @@ fun MainAuthScreen(
 
                     PagerAuthItems.Register -> RegisterScreen(
                         registerViewModel,
-                        onNavigateToLogin = {
+                        onNavigateToLogin = {email,password->
+                            loginViewModel.setCredentials(email,password)
                             scope.launch {
                                 pagerState.animateScrollToPage(PagerAuthItems.Login.ordinal)
                             }

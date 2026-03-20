@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa.data.Model.User
+package com.xluis.inventarioefa.data.Model.Firestore.User
 
 data class UserFirestore(
     val uid : String = "",

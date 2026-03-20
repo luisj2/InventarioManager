@@ -8,8 +8,10 @@ import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 class GetRoomZoneList(
     private val zoneRoomRepository: ZoneRoomRepository
 ) {
-    suspend operator fun invoke() : SuspendResult<List<Zone>> {
-        return when(val result = zoneRoomRepository.getAllZonesFull()){
+    suspend operator fun invoke(
+        userId : String
+    ) : SuspendResult<List<Zone>> {
+        return when(val result = zoneRoomRepository.getAllZonesFull(userId)){
             is SuspendResult.Success -> {
                 val zoneList = result.data.mapNotNull { zoneFull ->
                     zoneFull?.toDomain()

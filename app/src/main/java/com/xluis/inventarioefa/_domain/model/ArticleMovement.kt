@@ -8,9 +8,10 @@ data class ArticleMovement(
     val id: String = UUID.randomUUID().toString(),
     val articleId: String = "",
     val zoneId : String = "",
-    val zoneName : String = "???",
+    val zoneName : String = "",
     val articleName: String = "",
     val userId: String = "",
+    val userName : String = "",
     val count: Int = 0,
     val actionType: MovementAction = MovementAction.TAKE,
     val date: LocalDateTime = LocalDateTime.now()

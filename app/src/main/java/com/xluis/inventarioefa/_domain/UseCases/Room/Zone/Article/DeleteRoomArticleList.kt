@@ -11,6 +11,6 @@ class DeleteRoomArticleList(
         zoneId : Long,
         idList : List<Long>
     ) : SuspendResult<Boolean>{
-        return articlerepository.deleteArticleByIdList(zoneId,idList)
+        return articlerepository.removeArticleByIdList(zoneId,idList)
     }
 }

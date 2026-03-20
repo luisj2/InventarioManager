@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 import com.xluis.inventarioefa.presentation.ui.theme.GreenPrimary
 import com.xluis.inventarioefa.utils.ArticleItem
@@ -54,9 +55,12 @@ import com.xluis.inventarioefa.utils.toast
 @Composable
 fun CreateZoneScreen(
     viewModel: CreateZoneViewModel,
+    articleListToSave : List<Article>,
     parentZoneId : String?,
     storageType : StorageType,
     navigateArticleSelector: () -> Unit,
+    removeArticleId : (articleId : String) -> Unit,
+    clearScreenArticles : () -> Unit,
     navigateBack: () -> Unit
 ) {
 
@@ -65,16 +69,25 @@ fun CreateZoneScreen(
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(CreateZoneUiEvent.InitValues(parentZoneId,storageType))
-        viewModel.onEvent(CreateZoneUiEvent.InitParentListByUserId)
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(uiState.userId){
+        if(uiState.userId != null){
+            viewModel.onEvent(CreateZoneUiEvent.InitParentListByUserId)
+        }
+    }
 
+
+
+    LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 CreateZoneUiEffect.NavigateBack -> navigateBack()
                 CreateZoneUiEffect.NavigateToZoneSelector -> navigateArticleSelector()
                 is CreateZoneUiEffect.ShowToast -> context.toast(effect.message)
+                CreateZoneUiEffect.ClearScreenArticleList -> clearScreenArticles()
+                is CreateZoneUiEffect.RemoveArticle -> removeArticleId(effect.articleId)
+                is CreateZoneUiEffect.DeleteArticleInList -> removeArticleId(effect.articleId)
             }
         }
 
@@ -89,6 +102,7 @@ fun CreateZoneScreen(
         CreateZoneContent(
             uiState = uiState,
             onEvent = { event -> viewModel.onEvent(event) },
+            articles = articleListToSave,
             showToast = { message -> viewModel.onEvent(CreateZoneUiEvent.ShowToast(message)) }
         )
     }
@@ -155,6 +169,7 @@ fun AddArticleDialog(
 private fun CreateZoneContent(
     uiState: CreateZoneUiState,
     onEvent: (event: CreateZoneUiEvent) -> Unit,
+    articles : List<Article>,
     showToast: (message : String) -> Unit
 ) {
 
@@ -172,6 +187,7 @@ private fun CreateZoneContent(
         CreateZonePages.ADD_ARTICLES -> AddArticlesContent(
             uiState = uiState,
             onEvent = onEvent,
+            articles = articles
         )
 
         else -> showToast("Ha ocurrido un problema con el cambio de pantalla")
@@ -332,7 +348,8 @@ private fun FormContent(
 @Composable
 fun AddArticlesContent(
     uiState: CreateZoneUiState,
-    onEvent: (CreateZoneUiEvent) -> Unit
+    onEvent: (CreateZoneUiEvent) -> Unit,
+    articles : List<Article>
 ) {
     Column(
         modifier = Modifier
@@ -373,13 +390,16 @@ fun AddArticlesContent(
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            if (uiState.articleSelectedList.isNotEmpty()) {
+            if (articles.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(uiState.articleSelectedList) { article ->
-                        ArticleItem(article = article)
+                    items(articles) { article ->
+                        ArticleItem(
+                            article = article,
+                            onDelete = {onEvent(CreateZoneUiEvent.DeleteArticleInList(article.id))}
+                        )
                     }
                 }
             } else {
@@ -396,7 +416,7 @@ fun AddArticlesContent(
 
         // 🔹 Botón guardar zona siempre visible al final
         DefaultButton(
-            onClick = { onEvent(CreateZoneUiEvent.CreateZoneClicked) },
+            onClick = { onEvent(CreateZoneUiEvent.CreateZoneClicked(articles)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),

@@ -9,6 +9,7 @@ data class ArticleListSelectorUiState (
     val articleList : List<Article> = emptyList(),
     val filteredArticleList : List<Article> = emptyList(),
     val zoneId : String = "",
+    val screenId : String = "",
     val userId : String? = null,
     val storageType : StorageType = StorageType.FIREBASE,
     val createArticleDialogState : Boolean = false,

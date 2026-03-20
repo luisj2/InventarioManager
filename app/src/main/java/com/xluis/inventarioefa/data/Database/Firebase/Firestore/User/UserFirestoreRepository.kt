@@ -2,7 +2,7 @@ package com.xluis.inventarioefa.data.Database.Firestore.User
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.xluis.inventarioefa.data.Database.Firebase.Firestore.BaseFirestoreRepository
-import com.xluis.inventarioefa.data.Model.User.UserFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.User.UserFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.domain.model.Database.Firebase.Firestore.User.UserFirestoreQuery
 import com.xluis.inventarioefa.utils.FIRESTORE_USER_COLLECTION
@@ -31,6 +31,12 @@ class UserFirestoreRepository(
         executeFirestoreOperation {
             getUserDocumentById(userId)
         }
+
+    override suspend fun getUserNameById(userId: String): SuspendResult<String> {
+        return executeFirestoreOperation {
+            getUserDocumentById(userId)?.userName ?: throw IllegalStateException("El usuario no existe")
+        }
+    }
 
     override suspend fun getIdByEmail(email: String): SuspendResult<String> {
         return executeFirestoreOperation {

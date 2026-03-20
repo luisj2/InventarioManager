@@ -10,6 +10,6 @@ class RemoveFirestoreArticleList(
         zoneId : String,
         articleIdList : List<String>
     ) : SuspendResult<Boolean>{
-        return articleZoneRepository.deleteArticleListByIdList(zoneId,articleIdList)
+        return articleZoneRepository.removeArticleListByIdList(zoneId,articleIdList)
     }
 }

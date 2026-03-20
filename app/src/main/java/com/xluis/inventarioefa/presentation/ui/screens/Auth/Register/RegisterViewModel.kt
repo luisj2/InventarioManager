@@ -26,6 +26,10 @@ class RegisterViewModel(
     private val _uiEffect = Channel<RegisterUiEffect> {}
     val uiEffect = _uiEffect.receiveAsFlow()
 
+    private fun updateState(update: RegisterUiState.() -> RegisterUiState) {
+        _uiState.value = _uiState.value.update()
+    }
+
     fun onEvent(event: RegisterUiEvent) {
         when (event) {
             is RegisterUiEvent.EmailChanged -> {
@@ -62,7 +66,8 @@ class RegisterViewModel(
             registerAndSaveUserUseCase(user.toFirestore(), state.password)
                 .onSuccess {
                     showToast("Usuario registrado correctamente")
-                    navigateToLogin()
+                    clearFields()
+                    navigateToLogin(state.email,state.password)
                 }
                 .onError { error ->
                     showToast(error.message)
@@ -72,6 +77,20 @@ class RegisterViewModel(
             _uiState.value = _uiState.value.copy(isLoading = false)
         }
     }
+
+    private fun clearFields() {
+        updateState {
+            copy(
+                userName = "",
+                email = "",
+                password = "",
+                userNameError = null,
+                emailError = null,
+                passwordError = null
+            )
+        }
+    }
+
 
     private fun validateUserInput(user: User, password: String): Boolean {
         val emailResult = user.validateEmail()
@@ -120,9 +139,9 @@ class RegisterViewModel(
         }
     }
 
-    private fun navigateToLogin(){
+    private fun navigateToLogin(email : String,password : String){
         viewModelScope.launch {
-            _uiEffect.send(RegisterUiEffect.NavigateToLogin)
+            _uiEffect.send(RegisterUiEffect.NavigateToLogin(email,password))
         }
     }
 

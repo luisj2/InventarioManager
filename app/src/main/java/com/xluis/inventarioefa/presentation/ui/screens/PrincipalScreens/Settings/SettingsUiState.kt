@@ -2,6 +2,7 @@ package com.xluis.inventarioefa.presentation.ui.screens.PrincipalScreens.Setting
 
 data class SettingsUiState (
     val isLoggedIn : Boolean = false,
+    val showConfirmLogoutDialog : Boolean = false,
     val userId : String? = null,
     val username : String? = null,
     val isLoading : Boolean = false

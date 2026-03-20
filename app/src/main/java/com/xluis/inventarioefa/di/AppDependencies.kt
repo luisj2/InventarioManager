@@ -11,12 +11,14 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.LoginUserUseCase
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.Logout
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.RegisterAndSaveUserUseCase
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserIdByEmail
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserNameById
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.AcceptZoneRequest
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.DeleteUserZoneRequest
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserLoggedUsername
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.InsertZoneUserRequest
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserRequests
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.SendZoneUserRequest
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.CreateZoneFirestoreCase
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreUserZones
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetAllZoneListByUserId
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreZoneData
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreZoneNameById
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetUserZonesIds
@@ -28,14 +30,28 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArti
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticleMovements.GetMovementsByZoneIdList
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticleMovements.InsertMovementsInZone
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.GetFirestoreArticleListByZoneId
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.GetZoneArticleById
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.MoveArticleToZone
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.RemoveFirestoreArticleList
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.SaveArticleListInZone
+import com.xluis.inventarioefa._domain.UseCases.GetAllUserMovements
+import com.xluis.inventarioefa._domain.UseCases.GetAllZoneList
+import com.xluis.inventarioefa._domain.UseCases.GetArticlesByZoneId
+import com.xluis.inventarioefa._domain.UseCases.GetMovementsByZoneId
 import com.xluis.inventarioefa._domain.UseCases.GetUserZonesSummary
+import com.xluis.inventarioefa._domain.UseCases.GetZoneArticleById
+import com.xluis.inventarioefa._domain.UseCases.GetZoneById
+import com.xluis.inventarioefa._domain.UseCases.GetZoneNameById
+import com.xluis.inventarioefa._domain.UseCases.InsertMovements
+import com.xluis.inventarioefa._domain.UseCases.MoveArticleToZone
+import com.xluis.inventarioefa._domain.UseCases.RemoveArticlesByIdList
 import com.xluis.inventarioefa._domain.UseCases.RemoveZoneListCase
+import com.xluis.inventarioefa._domain.UseCases.Room.AddArtilesAndMovementSelected
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.CreateArticleCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.GetAllArticles
+import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.ClearAllArticleAndMovementSelected
+import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.GetArticlesByScreenAndZoneIds
+import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.RemoveArticleSelectedListByIds
+import com.xluis.inventarioefa._domain.UseCases.Room.MovementSelected.GetMovementsByScreenAndZoneIds
+import com.xluis.inventarioefa._domain.UseCases.Room.RemoveArticlesAndMovementByArticleId
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Article.DeleteRoomArticleList
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Article.GetZoneArticlesByZoneId
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Article.InsertArticleListRoom
@@ -47,6 +63,8 @@ import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.GetAllMoveme
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.GetRoomZoneMovementById
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.InsertMovementsListRoom
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.SaveRoomChanges
+import com.xluis.inventarioefa._domain.UseCases.SaveDatabaseChanges
+import com.xluis.inventarioefa._domain.UseCases.UpdateArticleCount
 import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthLoginRepository
 import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthRegisterRepository
 import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthSessionRepository
@@ -57,8 +75,10 @@ import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleMovementRepos
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleZoneFirestoreRepository
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ZoneFirestoreRepository
 import com.xluis.inventarioefa.data.Database.Room.Articles.ArticleRepository
+import com.xluis.inventarioefa.data.Database.Room.ArticlesSelected.ArticleSelectedRepository
 import com.xluis.inventarioefa.data.Database.Room.InventaryDatabase
 import com.xluis.inventarioefa.data.Database.Room.InventoryDatabaseBuilder
+import com.xluis.inventarioefa.data.Database.Room.MovementSelected.MovementSelectedRepository
 import com.xluis.inventarioefa.data.Database.Room.Zone.Article_Movements.ArticleZoneMovementRoomRepository
 import com.xluis.inventarioefa.data.Database.Room.Zone.ZoneRoomRepository
 import com.xluis.inventarioefa.domain.model.Database.Room.Article.ArticleZoneRoomRepository
@@ -96,7 +116,7 @@ object AppDependencies {
     val userZonesRepository by lazy { UserZonesRepository(fs) }
     val zoneFirestoreRepository by lazy { ZoneFirestoreRepository(fs) }
     val articleZoneRepository by lazy { ArticleZoneFirestoreRepository(fs) }
-    val movementsRepository by lazy { ArticleMovementRepository(fs) }
+    val movementsFirestoreRepository by lazy { ArticleMovementRepository(fs) }
     val sessionRepository by lazy { AuthSessionRepository(auth) }
     val zoneRoomRepository by lazy {
         ZoneRoomRepository(
@@ -110,6 +130,9 @@ object AppDependencies {
     val articleRoomRepository by lazy { ArticleZoneRoomRepository(db.articleZoneDao()) }
     val movementRoomRepository by lazy { ArticleZoneMovementRoomRepository(db.articleMovementDao()) }
     val userZonesRequestRequest by lazy { UserZonesRequestsRepository(fs) }
+    val articleFirestoreRepository by lazy { ArticleZoneFirestoreRepository(fs) }
+    val articleSelectedRepository by lazy{ ArticleSelectedRepository(db.articleSelectedDao()) }
+    val movementsselectedRepository by  lazy{ MovementSelectedRepository(db.movementSelectedDao()) }
 
 
     // UseCases
@@ -121,16 +144,13 @@ object AppDependencies {
     val getZoneListByIdList by lazy { GetZoneListByIdList(zoneFirestoreRepository) }
     val createZoneFirestoreCase by lazy {
         CreateZoneFirestoreCase(
-            userZonesRepository = userZonesRepository,
-            zonesFirestoreRepository = zoneFirestoreRepository,
-            articleRepository = articleZoneRepository,
-            movementRepository = movementsRepository
+            zonesFirestoreRepository = zoneFirestoreRepository
         )
     }
     val getFirestoreZoneData by lazy {
         GetFirestoreZoneData(
             zoneRepository = ZoneFirestoreRepository(fs),
-            articleZoneRepository = ArticleZoneFirestoreRepository(fs),
+            articleZoneRepository = articleFirestoreRepository,
             movementsZoneRepository = ArticleMovementRepository(fs)
         )
     }
@@ -157,20 +177,24 @@ object AppDependencies {
     }
 
     val getArticlesById by lazy {
-        GetZoneArticleById(articleZoneRepository)
+        GetZoneArticleById(articleZoneRepository, articleRoomRepository)
+    }
+
+    val getAllZoneListByUserId by lazy {
+        GetAllZoneListByUserId(
+            zoneFirestoreRepository, zoneRoomRepository
+        )
     }
 
     val moveArticleToZone by lazy {
         MoveArticleToZone(
-            articleFirestoreRepository = articleZoneRepository,
-            movementFirestoreRepository = movementsRepository,
-            articleRoomRepository = articleRoomRepository,
-            movementRoomRepository = movementRoomRepository
+            zoneFirestoreRepository = zoneFirestoreRepository,
+            zoneRoomRepository = zoneRoomRepository
         )
     }
 
     val getMovementsByZoneIdList by lazy {
-        GetMovementsByZoneIdList(movementsRepository)
+        GetMovementsByZoneIdList(movementsFirestoreRepository)
     }
 
     val getUserLoggedEmail by lazy {
@@ -213,8 +237,8 @@ object AppDependencies {
     }
 
     // UseCases para ZoneInfoViewModel
-    val insertZoneUserRequest by lazy {
-        InsertZoneUserRequest(userZonesRequestRequest)
+    val sendZoneUserRequest by lazy {
+        SendZoneUserRequest(userZonesRequestRequest)
     }
 
     val removeZoneMember by lazy {
@@ -230,61 +254,127 @@ object AppDependencies {
         AcceptZoneRequest(zoneFirestoreRepository)
     }
 
-    val getFirestoreUserZones by lazy {
-        GetFirestoreUserZones(zoneFirestoreRepository, articleZoneRepository)
-    }
-    val getUserIdByEmail by lazy{
+
+    val getUserIdByEmail by lazy {
         GetUserIdByEmail(userFirestoreRepository)
     }
 
-    val getAllRoomMovements by lazy{
+    val getAllRoomMovements by lazy {
         GetAllMovementsUserZones(zoneRoomRepository)
     }
 
-    val insertArticleListRoom by lazy{
+    val insertArticleListRoom by lazy {
         InsertArticleListRoom(articleRoomRepository)
     }
 
-    val insertMovementsListRoom by lazy{
+    val insertMovementsListRoom by lazy {
         InsertMovementsListRoom(movementRoomRepository)
     }
 
-    val getZoneArticlesByZoneId by lazy{
+    val getZoneArticlesByZoneId by lazy {
         GetZoneArticlesByZoneId(zoneRoomRepository)
     }
 
-    val getFirestoreArticleListByZoneId by lazy{
+    val getFirestoreArticleListByZoneId by lazy {
         GetFirestoreArticleListByZoneId(articleZoneRepository)
     }
     val deleteRoomArticleList by lazy {
         DeleteRoomArticleList(articleRoomRepository)
     }
 
-    val deleteFirestoreArticleListByZoneId by lazy{
+    val deleteFirestoreArticleListByZoneId by lazy {
         RemoveFirestoreArticleList(articleZoneRepository)
     }
-    val getRoomZoneNameById by lazy{
+    val getRoomZoneNameById by lazy {
         GetRoomZoneNameById(zoneRoomRepository)
     }
-    val saveRoomChanges by lazy{
-        SaveRoomChanges(articleRoomRepository, movementRoomRepository)
+    val saveRoomChanges by lazy {
+        SaveRoomChanges(zoneRoomRepository)
     }
 
     val saveFirestoreZoneChanges by lazy {
-        SaveFirestoreZoneChanges(articleZoneRepository, movementsRepository)
+        SaveFirestoreZoneChanges(articleZoneRepository, movementsFirestoreRepository)
     }
     val getFirestoreZoneMovementListById by lazy {
-        GetFirestoreZoneMovementListById(movementsRepository)
+        GetFirestoreZoneMovementListById(movementsFirestoreRepository)
     }
 
-    val getRoomZoneMovementById by lazy{
+    val getRoomZoneMovementById by lazy {
         GetRoomZoneMovementById(zoneRoomRepository)
     }
 
-    val insertMovementsInZone by lazy{
-        InsertMovementsInZone(movementsRepository)
+    val insertMovementsInZone by lazy {
+        InsertMovementsInZone(movementsFirestoreRepository)
     }
 
+    val getUserRequest by lazy {
+        GetUserRequests(userZonesRequestRequest)
+    }
+
+    val getZoneById by lazy {
+        GetZoneById(zoneRoomRepository, zoneFirestoreRepository)
+    }
+
+    val getArticlesByZoneId by lazy {
+        GetArticlesByZoneId(zoneRoomRepository, articleZoneRepository)
+    }
+
+    val getZoneNameById by lazy {
+        GetZoneNameById(zoneFirestoreRepository, zoneRoomRepository)
+    }
+
+    val saveDatabaseChanges by lazy {
+        SaveDatabaseChanges(zoneRoomRepository, zoneFirestoreRepository)
+    }
+
+    val getMovementsByZoneId by lazy {
+        GetMovementsByZoneId(zoneRoomRepository, movementsFirestoreRepository)
+    }
+
+    val removeArticlesByIdList by lazy {
+        RemoveArticlesByIdList(articleRoomRepository, articleFirestoreRepository)
+    }
+
+    val insertMovements by lazy {
+        InsertMovements(movementRoomRepository, movementsFirestoreRepository)
+    }
+
+    val getAllUserMovements by lazy {
+        GetAllUserMovements(zoneFirestoreRepository, zoneRoomRepository)
+    }
+
+    val getUserNameById by lazy {
+        GetUserNameById(userFirestoreRepository)
+    }
+    val updateArticleCount by lazy{
+        UpdateArticleCount(zoneRoomRepository, zoneFirestoreRepository)
+    }
+
+    val getArticlesByScreenAndZoneIds by lazy{
+        GetArticlesByScreenAndZoneIds(articleSelectedRepository)
+    }
+    val getMovementsByScreenAndZoneIds by lazy{
+        GetMovementsByScreenAndZoneIds(movementsselectedRepository)
+    }
+
+    val addArticlesAndMovementsSelected by lazy{
+        AddArtilesAndMovementSelected(articleSelectedRepository, movementsselectedRepository)
+    }
+
+    val removeArticleSelectedListByIds by lazy{
+        RemoveArticleSelectedListByIds(articleSelectedRepository)
+    }
+    val clearAllArticleAndMovementSelected by lazy{
+        ClearAllArticleAndMovementSelected(articleSelectedRepository, movementsselectedRepository   )
+    }
+
+    val removeArticlesAndMovementByArticleId by lazy{
+        RemoveArticlesAndMovementByArticleId(articleSelectedRepository, movementsselectedRepository)
+    }
+
+    val getAllZoneList by lazy{
+        GetAllZoneList(zoneRoomRepository, zoneFirestoreRepository)
+    }
 
     // Mapa de factories
     private val factories = mutableMapOf<KClass<out ViewModel>, ViewModelProvider.Factory>()
@@ -307,8 +397,7 @@ object AppDependencies {
         registerViewModel(LoginViewModel::class) { LoginViewModel(loginUseCase) }
         registerViewModel(ZonePrincipalViewModel::class) {
             ZonePrincipalViewModel(
-                getFirestoreUserZones = getFirestoreUserZones,
-                getRoomZoneList = getRoomZoneList,
+                getAllZoneList = getAllZoneList,
                 isUserLoggedIn = isUserLoggedIn,
                 removeZoneListCase = removeZoneListCase
             )
@@ -329,26 +418,28 @@ object AppDependencies {
 
         registerViewModel(ZoneInfoViewModel::class) {
             ZoneInfoViewModel(
-                getFirestoreZoneData = getFirestoreZoneData,
-                getRoomZone = getRoomZone,
-                getZoneArticlesByZoneId = getZoneArticlesByZoneId,
-                getFirestoreArticleListByZoneId = getFirestoreArticleListByZoneId,
-                insertZoneUserRequest = insertZoneUserRequest,
+                getZoneById = getZoneById,
+                getArticlesByZoneId = getArticlesByZoneId,
+                sendZoneUserRequest = sendZoneUserRequest,
                 removeZoneMember = removeZoneMember,
-                getUserByEmail = getUserIdByEmail,
+                getUserIdByEmail = getUserIdByEmail,
                 getUserLoggedEmail = getUserLoggedEmail,
-                getFirestoreZoneNameById = getFirestoreZoneNameById,
-                getRoomZoneNameById = getRoomZoneNameById,
+                getZoneNameById = getZoneNameById,
                 getFirestoreUsername = getUserLoggedUsername,
-                saveRoomChanges = saveRoomChanges,
-                saveFirestoreZoneChanges = saveFirestoreZoneChanges,
-                getRoomZoneMovementById = getRoomZoneMovementById,
-                getFirestoreZoneMovementListById = getFirestoreZoneMovementListById,
-                removeFirestoreArticleList = deleteFirestoreArticleListByZoneId,
-                deleteRoomArticleList = deleteRoomArticleList,
-                insertFirestoreMovements = insertMovementsInZone,
-                insertRoomMovements = insertMovementsListRoom
+                saveDatabaseChanges = saveDatabaseChanges,
+                getMovementsByZoneId = getMovementsByZoneId,
+                removeArticlesByIdList = removeArticlesByIdList,
+                insertMovements = insertMovements,
+                getUserNameById = getUserNameById,
+                updateArticleCount = updateArticleCount,
+                getArticlesByScreenAndZoneIds = getArticlesByScreenAndZoneIds,
+                getMovementsByScreenAndZoneIds = getMovementsByScreenAndZoneIds,
+                removeArticleSelectedListByIds = removeArticleSelectedListByIds,
+                clearAllArticleAndMovementSelected = clearAllArticleAndMovementSelected,
+                removeArticlesAndMovementByArticleId = removeArticlesAndMovementByArticleId,
+                getUserLoggedUsername = getUserLoggedUsername
             )
+
 
         }
 
@@ -357,17 +448,18 @@ object AppDependencies {
                 getRoomArticles = getRoomArticles,
                 getFirestoreZoneNameById = getFirestoreZoneNameById,
                 getRoomZoneNameById = getRoomZoneNameById,
-                createArticle = createArticleCase
+                createArticle = createArticleCase,
+                addArtilesAndMovementSelected = addArticlesAndMovementsSelected,
+                getUserLoggedUsername = getUserLoggedUsername
             )
         }
         registerViewModel(ZoneSelectorViewModel::class) {
             ZoneSelectorViewModel(
-                getUserZonesIds = getUserZonesIds,
-                getZoneListByIdList = getZoneListByIdList,
+                getAllZoneListByUserId = getAllZoneListByUserId,
                 getZoneArticleById = getArticlesById,
                 moveArticleToZone = moveArticleToZone,
-                getRoomZoneList = getRoomZoneList,
-                hasInternet = appContext.hasConexion()
+                hasInternet = appContext.hasConexion(),
+                getUserLoggedUsername = getUserLoggedUsername
             )
         }
 
@@ -377,9 +469,7 @@ object AppDependencies {
 
         registerViewModel(YourMovementsViewModel::class) {
             YourMovementsViewModel(
-                getUserZonesIds = getUserZonesIds,
-                getMovementsByZoneIdList = getMovementsByZoneIdList,
-                getAllRoomMovements = getAllRoomMovements
+                getAllUserMovements = getAllUserMovements
             )
         }
 
@@ -394,7 +484,8 @@ object AppDependencies {
         registerViewModel(ZoneRequestsViewModel::class) {
             ZoneRequestsViewModel(
                 deleteUserZoneRequest = deleteUserZoneRequest,
-                acceptZoneRequest = acceptZoneRequest
+                acceptZoneRequest = acceptZoneRequest,
+                getUserRequests = getUserRequest
             )
         }
 

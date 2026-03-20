@@ -3,10 +3,10 @@ package com.xluis.inventarioefa.data.Model.Room.Zone
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
-import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "article",
+    primaryKeys = ["id", "zoneId"],
     foreignKeys = [
         ForeignKey(
             entity = ZoneEntity::class,
@@ -18,9 +18,9 @@ import androidx.room.PrimaryKey
     indices = [Index("zoneId")]
 )
 data class ArticleZoneEntity(
-    @PrimaryKey (autoGenerate = true) val id: Long = 0,
+    val id: Long = 0,
     val name: String,
     val category: String,
     val zoneId: Long,
-    val count : Int = 1
+    val count: Int = 1
 )

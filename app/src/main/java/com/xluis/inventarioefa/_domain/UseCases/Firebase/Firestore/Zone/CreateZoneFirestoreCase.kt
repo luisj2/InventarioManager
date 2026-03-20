@@ -1,25 +1,18 @@
 package com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone
 
 import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
-import com.xluis.inventarioefa._domain.util.flatMapRollback
 import com.xluis.inventarioefa._domain.util.fold
 import com.xluis.inventarioefa._domain.util.toValidationResult
-import com.xluis.inventarioefa.data.Database.Firestore.User.UserZonesRepository
-import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleMovementRepository
-import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleZoneFirestoreRepository
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ZoneFirestoreRepository
-import com.xluis.inventarioefa.data.Model.Article.ArticleFirestore
-import com.xluis.inventarioefa.data.Model.Movement.ArticleMovementFirestore
-import com.xluis.inventarioefa.data.Model.Zone.ZoneFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Article.ArticleFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Movement.ArticleMovementFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Zone.ZoneFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class CreateZoneFirestoreCase(
-    private val userZonesRepository: UserZonesRepository,
-    private val zonesFirestoreRepository: ZoneFirestoreRepository,
-    private val articleRepository: ArticleZoneFirestoreRepository,
-    private val movementRepository: ArticleMovementRepository
+    private val zonesFirestoreRepository: ZoneFirestoreRepository
 ) {
 
     suspend operator fun invoke(
@@ -29,7 +22,7 @@ class CreateZoneFirestoreCase(
         userId: String
     ): ValidationResult {
 
-        val zoneId = zone.id ?: return ValidationResult.Error("Ha ocurrido un fallo al crear la zona")
+
 
         // 1️⃣ Preparar zona hija con jerarquía real
         val zoneWithHierarchy = prepareZoneHierarchy(zone, parentId)
@@ -47,25 +40,7 @@ class CreateZoneFirestoreCase(
             )
         }
 
-        // 3️⃣ Encadenar operaciones con rollback centralizado
-        return zonesFirestoreRepository.insertZone(zoneWithHierarchy)
-            .toValidationResult { rollbackZone(zoneId) }
-            .flatMapRollback({ rollbackZone(zoneId) }) {
-                articleRepository.insertArticleList(zoneId, articleList)
-                    .toValidationResult { rollbackZone(zoneId) }
-            }
-            .flatMapRollback({ rollbackZone(zoneId) }) {
-                movementRepository.insertMovementsList(zoneId, movements)
-                    .toValidationResult { rollbackZone(zoneId) }
-            }
-            .flatMapRollback({ rollbackZone(zoneId, parentId) }) {
-                parentId?.let { zonesFirestoreRepository.addChildToZone(it, zoneId).toValidationResult { rollbackZone(zoneId, it) } }
-                    ?: ValidationResult.Success
-            }
-            .flatMapRollback({ rollbackZone(zoneId, parentId) }) {
-                userZonesRepository.addZoneId(zoneId, userId)
-                    .toValidationResult { rollbackZone(zoneId, parentId) }
-            }
+        return zonesFirestoreRepository.createZone(zoneWithHierarchy,articleList,movements,parentId,userId).toValidationResult()
     }
 
     private suspend fun prepareZoneHierarchy(zone: ZoneFirestore, parentId: String?): ZoneFirestore? {
@@ -78,10 +53,4 @@ class CreateZoneFirestoreCase(
         } else zone
     }
 
-    private suspend fun rollbackZone(zoneId: String, parentId: String? = null) {
-        zonesFirestoreRepository.deleteZoneById(zoneId)
-        articleRepository.deleteArticlesByZoneId(zoneId)
-        movementRepository.deleteMovementsByZoneId(zoneId)
-        parentId?.let { zonesFirestoreRepository.removeChildId(it, zoneId) }
-    }
 }

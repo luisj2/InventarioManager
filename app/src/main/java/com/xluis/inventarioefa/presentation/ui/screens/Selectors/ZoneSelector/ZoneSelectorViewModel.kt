@@ -4,28 +4,25 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetUserZonesIds
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetZoneListByIdList
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.GetZoneArticleById
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.MoveArticleToZone
-import com.xluis.inventarioefa._domain.UseCases.Room.Zone.GetRoomZoneList
-import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
-import com.xluis.inventarioefa._domain.util.flatMap
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserLoggedUsername
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetAllZoneListByUserId
+import com.xluis.inventarioefa._domain.UseCases.GetZoneArticleById
+import com.xluis.inventarioefa._domain.UseCases.MoveArticleToZone
+import com.xluis.inventarioefa._domain.util.getOrNull
 import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa.data.Database.Datastore.UserDataStore
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
-import com.xluis.inventarioefa.utils.YOUR_MOVEMENT_ROOM
+import com.xluis.inventarioefa.utils.YOUR_MOVE_ROOM
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class ZoneSelectorViewModel(
-    private val getUserZonesIds: GetUserZonesIds,
-    private val getZoneListByIdList: GetZoneListByIdList,
-    private val getRoomZoneList: GetRoomZoneList,
+    private val getAllZoneListByUserId : GetAllZoneListByUserId,
     private val getZoneArticleById: GetZoneArticleById,
     private val moveArticleToZone: MoveArticleToZone,
+    private val getUserLoggedUsername: GetUserLoggedUsername,
     private val hasInternet: Boolean
 ) : ViewModel() {
 
@@ -44,7 +41,6 @@ class ZoneSelectorViewModel(
         viewModelScope.launch {
             UserDataStore.getUserUid().collect { uid ->
                 updateState { copy(userId = uid) }
-                getZonesByUserId()
             }
         }
     }
@@ -60,20 +56,23 @@ class ZoneSelectorViewModel(
                 )
             }
 
-            is ZoneSelectorUiEvent.SaveMoveArticleMovement -> saveMoveArticleMovement()
+            is ZoneSelectorUiEvent.SaveMoveArticleMove -> saveMoveArticleMove()
             is ZoneSelectorUiEvent.ShowToast -> showToast(event.message)
             is ZoneSelectorUiEvent.GetArticleById -> getArticleByZoneAndArticleId(
                 event.zoneId,
                 event.articleId
             )
 
-            is ZoneSelectorUiEvent.Initialize -> updateState {
-                copy(
-                    zoneIdFromMove = event.zoneIdFromMove,
-                    articleIdToMove = event.articleIdToMove,
-                    zoneFromMoveStorageType = event.zoneToMoveStorageType,
-                    articleCountToMove = event.articleCountToMove
-                )
+            is ZoneSelectorUiEvent.Initialize ->{
+                updateState {
+                    copy(
+                        zoneIdFromMove = event.zoneIdFromMove,
+                        articleIdToMove = event.articleIdToMove,
+                        storageTypeFromMove = event.storageTypeFromMove,
+                        zoneFromMoveStorageType = event.zoneToMoveStorageType,
+                        articleCountToMove = event.articleCountToMove
+                    )
+                }
             }
 
             ZoneSelectorUiEvent.DeselectZone -> {
@@ -88,7 +87,8 @@ class ZoneSelectorViewModel(
     private fun getArticleByZoneAndArticleId(zoneId: String, articleId: String) {
         viewModelScope.launch {
             changeLoadingTo(true)
-            getZoneArticleById(zoneId, articleId)
+            val storageType = _uiState.value.storageTypeFromMove ?: return@launch
+            getZoneArticleById(zoneId, articleId,storageType)
                 .onSuccess { article ->
                     updateState { copy(articleToMove = article?.copy(count = _uiState.value.articleCountToMove)) }
                 }
@@ -100,7 +100,7 @@ class ZoneSelectorViewModel(
     }
 
 
-    private fun saveMoveArticleMovement() {
+    private fun saveMoveArticleMove() {
         viewModelScope.launch {
             changeLoadingTo(true)
 
@@ -125,7 +125,7 @@ class ZoneSelectorViewModel(
                     showToast("Zona destino no seleccionada")
                 }
 
-            var userId: String = YOUR_MOVEMENT_ROOM
+            var userId: String = YOUR_MOVE_ROOM
 
             if (needNet) {
                 userId = state.userId
@@ -134,21 +134,22 @@ class ZoneSelectorViewModel(
                     }
             }
 
+            val userName = getUserLoggedUsername(userId).getOrNull() ?: "???"
+
             moveArticleToZone(
                 zoneIdFrom = state.zoneIdFromMove,
                 storageFrom = state.zoneFromMoveStorageType ?: StorageType.LOCAL,
                 zoneIdTo = zoneTo,
                 storageTo = state.storageTypeZoneSelected ?: StorageType.LOCAL,
                 article = article,
-                countToMove = state.articleCountToMove,
+                userName = userName,
                 userId = userId
             )
                 .onSuccess {
                     showToast("Movimiento realizado correctamente")
+                    navigateBack()
                 }
-                .onError { error ->
-                    showToast(error.message)
-                }
+                .onError { error -> showToast(error.message) }
 
             changeLoadingTo(false)
         }
@@ -158,32 +159,16 @@ class ZoneSelectorViewModel(
     private fun getZonesByUserId() {
         viewModelScope.launch {
             changeLoadingTo(true)
-            val userId = uiState.value.userId
-            var firestoreZones = listOf<Zone>()
-            var roomZones = listOf<Zone>()
+            val userId = _uiState.value.userId
+            val zoneIdFrom = _uiState.value.zoneIdFromMove ?: return@launch
+            val storageType = _uiState.value.storageTypeFromMove ?: return@launch
 
-            if (userId != null) {
-                getUserZonesIds(userId)
-                    .flatMap { idList ->
-                        getZoneListByIdList(idList)
-                    }
-                    .onSuccess { zoneList ->
-                        firestoreZones = zoneList
-                    }
-                    .onError { error ->
-                        showToast(error.message)
-                    }
-            }
-
-            getRoomZoneList()
-                .onSuccess { zoneList ->
-                    roomZones = zoneList
+            getAllZoneListByUserId(userId,zoneIdFrom,storageType)
+                .onSuccess {
+                    updateState { copy(zoneList = it) }
+                }.onError {
+                    showToast(it.message)
                 }
-                .onError { error ->
-                    showToast(error.message)
-                }
-
-            updateState { copy(zoneList = firestoreZones + roomZones) }
 
             changeLoadingTo(false)
         }

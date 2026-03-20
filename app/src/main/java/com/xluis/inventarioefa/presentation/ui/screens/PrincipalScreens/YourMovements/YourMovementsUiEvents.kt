@@ -9,4 +9,6 @@ sealed class YourMovementsUiEvents {
     data class OnSearchChanged(val query: String) : YourMovementsUiEvents()
     data class OnActionFilterChanged(val action: MovementAction?) : YourMovementsUiEvents()
     data class OnSortOrderChanged(val sortType: SortType) : YourMovementsUiEvents()
+
+    data object OnToggleDate : YourMovementsUiEvents()
 }

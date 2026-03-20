@@ -5,11 +5,14 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FirebaseFirestore
 import com.xluis.inventarioefa._domain.Repository.Firebase.Firestore.Zone.ArticleZoneFirestoreQuery
 import com.xluis.inventarioefa.data.Database.Firebase.Firestore.BaseFirestoreRepository
-import com.xluis.inventarioefa.data.Model.Article.ArticleFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Article.ArticleFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_COUNT
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_ARTICLE_SUBCOLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_COLLECTION
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class ArticleZoneFirestoreRepository(
@@ -80,6 +83,25 @@ class ArticleZoneFirestoreRepository(
         }
     }
 
+    override fun getArticleListByZoneIdFlow(zoneId: String): Flow<List<ArticleFirestore>> = callbackFlow {
+
+        val listener = getArticleCollection(zoneId)
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val articles = snapshot
+                    ?.toObjects(ArticleFirestore::class.java)
+                    ?: emptyList()
+
+                trySend(articles)
+            }
+
+        awaitClose { listener.remove() }
+    }
     override suspend fun getArticleById(
         zoneId: String,
         articleId: String
@@ -146,6 +168,8 @@ class ArticleZoneFirestoreRepository(
     }
 
 
+
+
     override suspend fun moveArticle(
         articleToMove: ArticleFirestore,
         zoneIdToRemove: String,
@@ -185,26 +209,23 @@ class ArticleZoneFirestoreRepository(
         }
     }
 
-    override suspend fun deleteArticleListByIdList(zoneId : String,idList: List<String>): SuspendResult<Boolean> {
-        return executeFirestoreOperation {
+    override suspend fun removeArticleListByIdList(
+        zoneId: String,
+        idList: List<String>
+    ): SuspendResult<Boolean> {
+        if (idList.isEmpty()) {
+            return SuspendResult.Error("La lista de artículos está vacía")
+        }
 
-            if (idList.isEmpty()) {
-                return@executeFirestoreOperation true
-            }
-
-            val batch = fs.batch()
+        return executeBatchOperation { batch ->
             val collectionRef = getArticleCollection(zoneId)
-
             idList.forEach { id ->
                 val docRef = collectionRef.document(id)
                 batch.delete(docRef)
             }
-
-            batch.commit().await()
-
-            true
         }
     }
+
 
 
     override suspend fun removeArticleCount(
@@ -285,4 +306,35 @@ class ArticleZoneFirestoreRepository(
             }.await()
         }
     }
+
+    override suspend fun changeArticleCount(
+        zoneId: String,
+        articleId: String,
+        newCount: Int
+    ): SuspendResult<Boolean> {
+        return executeFirestoreOperation {
+            val articleRef = getArticleDocumentRef(zoneId, articleId)
+
+            fs.runTransaction { transaction ->
+                val snapshot = transaction.get(articleRef)
+
+                if (!snapshot.exists()) {
+                    return@runTransaction false
+                }
+
+                if (newCount <= 0) {
+                    transaction.delete(articleRef)
+                } else {
+                    transaction.update(
+                        articleRef,
+                        FIRESTORE_ARTICLE_COUNT,
+                        newCount
+                    )
+                }
+
+                true
+            }.await()
+        }
+    }
+
 }

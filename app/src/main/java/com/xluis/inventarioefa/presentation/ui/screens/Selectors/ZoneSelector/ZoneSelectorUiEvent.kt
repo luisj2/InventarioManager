@@ -11,7 +11,7 @@ sealed class ZoneSelectorUiEvent {
     data class SelectZone(val zoneIdSelected : String, val storageType : StorageType) : ZoneSelectorUiEvent()
     data object DeselectZone : ZoneSelectorUiEvent()
 
-    data object SaveMoveArticleMovement  : ZoneSelectorUiEvent()
+    data object SaveMoveArticleMove  : ZoneSelectorUiEvent()
     data class ShowToast (val message : String) : ZoneSelectorUiEvent()
 
     data object NavigateBack : ZoneSelectorUiEvent()
@@ -19,6 +19,7 @@ sealed class ZoneSelectorUiEvent {
     data class Initialize(
         val zoneIdFromMove: String,
         val zoneToMoveStorageType : StorageType,
+        val storageTypeFromMove : StorageType,
         val articleIdToMove: String,
         val articleCountToMove: Int
     ) : ZoneSelectorUiEvent()

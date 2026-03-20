@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa.data.Model.Article
+package com.xluis.inventarioefa.data.Model.Firestore.Article
 
 import java.util.UUID
 

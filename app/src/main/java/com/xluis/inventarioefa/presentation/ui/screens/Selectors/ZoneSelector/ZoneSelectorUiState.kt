@@ -9,6 +9,7 @@ data class ZoneSelectorUiState(
     val articleToMove: Article? = null,             // Artículo que se va a mover
     val zoneIdSelected: String? = null, // Zona seleccionada para mover el artículo
     val storageTypeZoneSelected : StorageType? = null,
+    val storageTypeFromMove : StorageType? = null,
     val isLoading: Boolean = false,                 // Indicador de carga
     val userId: String? = null,                         // Usuario actual
     val zoneIdFromMove: String = "", // Zona de origen del artículo

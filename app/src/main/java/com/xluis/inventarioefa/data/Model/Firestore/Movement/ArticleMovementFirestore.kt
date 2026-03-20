@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa.data.Model.Movement
+package com.xluis.inventarioefa.data.Model.Firestore.Movement
 
 import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import java.time.LocalDateTime

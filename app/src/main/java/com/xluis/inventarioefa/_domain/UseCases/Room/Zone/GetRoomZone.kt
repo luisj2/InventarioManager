@@ -9,7 +9,7 @@ class GetRoomZone(
     private val zoneRoomRepository: ZoneRoomRepository
 ) {
     suspend operator fun invoke(zoneId : String) : SuspendResult<Zone?> {
-        return when(val result = zoneRoomRepository.getZoneFull(zoneId)){
+        return when(val result = zoneRoomRepository.getZoneFull(zoneId.toLongOrNull() ?: 0)){
             is SuspendResult.Success -> {
                 val zoneFull = result.data
                 val zoneDomain = zoneFull?.toDomain()

@@ -4,24 +4,20 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetUserZonesIds
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticleMovements.GetMovementsByZoneIdList
-import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.GetAllMovementsUserZones
+import com.xluis.inventarioefa._domain.UseCases.GetAllUserMovements
 import com.xluis.inventarioefa._domain.model.DataClass.ArticleMovement
+import com.xluis.inventarioefa._domain.model.Enums.DateMode
 import com.xluis.inventarioefa._domain.model.Enums.SortType
-import com.xluis.inventarioefa._domain.util.flatMap
 import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa.data.Database.Datastore.UserDataStore
-import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
+import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class YourMovementsViewModel(
-    private val getUserZonesIds: GetUserZonesIds,
-    private val getMovementsByZoneIdList: GetMovementsByZoneIdList,
-    private val getAllRoomMovements: GetAllMovementsUserZones
+    private val getAllUserMovements : GetAllUserMovements
 ) : ViewModel() {
 
     private val _uiState = mutableStateOf(YourMovementsUiState())
@@ -47,34 +43,24 @@ class YourMovementsViewModel(
             is YourMovementsUiEvents.UpdateMovementListByUserId -> updateMovementsByUserId()
 
             is YourMovementsUiEvents.OnActionFilterChanged -> updateState {
-                val actionFilter = event.action
-                val filteredList = movementList
-                    .filter { movement -> actionFilter == null || movement.actionType == actionFilter }
-                    .filter { movement ->
-                        searchQuery.isEmpty() || movement.articleName.lowercase().contains(searchQuery) ||
-                                movement.zoneName.lowercase().contains(searchQuery)
-                    }
+                val action = event.action
+                val filtered = applyFilters(movementList, searchQuery, action)
                 copy(
-                    selectedAction = actionFilter,
-                    filteredMovements = applySort(filteredList, sortType)
+                    selectedAction = action,
+                    filteredMovements = applySort(filtered, sortType)
                 )
             }
 
             is YourMovementsUiEvents.OnSearchChanged -> updateState {
-                val query = event.query.lowercase()
-                val filteredList = movementList
-                    .filter { movement ->
-                        selectedAction == null || movement.actionType == selectedAction
-                    }
-                    .filter { movement ->
-                        query.isEmpty() || movement.articleName.lowercase().contains(query) ||
-                                movement.zoneName.lowercase().contains(query)
-                    }
+                val query = event.query
+                val filtered = applyFilters(movementList, query, selectedAction)
                 copy(
                     searchQuery = query,
-                    filteredMovements = applySort(filteredList, sortType)
+                    filteredMovements = applySort(filtered, sortType)
                 )
             }
+
+
 
             is YourMovementsUiEvents.OnSortOrderChanged -> updateState {
                 copy(
@@ -82,6 +68,26 @@ class YourMovementsViewModel(
                     filteredMovements = applySort(filteredMovements, event.sortType)
                 )
             }
+
+            YourMovementsUiEvents.OnToggleDate -> updateState {
+                val newDateMode = DateMode.toggle(dateMode)
+                val filtered = applyFilters(movementList, searchQuery, selectedAction)
+                val sorted = sortByDate(filtered, newDateMode)
+
+                copy(
+                    dateMode = newDateMode,
+                    filteredMovements = sorted
+                )
+            }
+        }
+
+
+    }
+
+    private fun sortByDate(list: List<ArticleMovement>, dateMode: DateMode): List<ArticleMovement> {
+        return when (dateMode) {
+            DateMode.ASCENDING -> list.sortedBy { it.date }
+            DateMode.DESCENDING -> list.sortedByDescending { it.date }
         }
     }
 
@@ -98,36 +104,36 @@ class YourMovementsViewModel(
         }
     }
 
+    private fun applyFilters(
+        list: List<ArticleMovement>,
+        query: String,
+        action: MovementAction?
+    ): List<ArticleMovement> {
+        return list
+            .filter { action == null || it.actionType == action }
+            .filter {
+                query.isBlank() || it.articleName.contains(query, ignoreCase = true) || it.zoneName.contains(query, ignoreCase = true)
+            }
+    }
+
+
     private fun updateMovementsByUserId() {
-        val uid = _uiState.value.userId ?: return
+        val uid = _uiState.value.userId ?: run{
+            showToast("No se ha encontrado el id del usuario")
+            return
+        }
+
         viewModelScope.launch {
             updateState { copy(isLoading = true) }
-            getUserZonesIds(uid)
-                .flatMap { zonesIdList ->
-                    if (zonesIdList.isEmpty()) {
-                        SuspendResult.Success(emptyList())
-                    } else {
-                        getMovementsByZoneIdList(zonesIdList)
-                    }
-                }
-                .onSuccess { movementList ->
-                    if (movementList.isNotEmpty()) updateState { copy(movementList = movementList) }
-                }
-                .onError { message ->
-                    showToast(message.message)
-                }
 
-            getAllRoomMovements()
-                .onSuccess { movementsList ->
-                    updateState { copy(movementList = movementsList) }
-                }
-                .onError { error ->
-                    showToast(error.message)
-                }
+            getAllUserMovements(uid)
+                .onSuccess { movements -> updateState { copy(movementList = movements, filteredMovements = movements) } }
+                .onError { error -> showToast(error.message) }
 
             updateState { copy(isLoading = false) }
         }
     }
+
 
 
     private fun showToast(message: String) {

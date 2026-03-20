@@ -7,10 +7,11 @@ import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
 
 fun Article.toZoneEntity(): ArticleZoneEntity {
     return ArticleZoneEntity(
-        id = 0,
+        id = this.id.toLongOrNull() ?: 0,
         name = this.name,
         category = this.category.name,
-        zoneId = this.zoneId?.toLongOrNull() ?: 0
+        zoneId = this.zoneId?.toLongOrNull() ?: 0,
+        count = this.count
     )
 }
 
@@ -20,6 +21,6 @@ fun ArticleZoneEntity.toDomain(): Article {
         id = this.id.toString(),
         name = this.name,
         category = ArticleCategory.valueOf(this.category),
-        count = 1,
+        count = this.count,
     )
 }

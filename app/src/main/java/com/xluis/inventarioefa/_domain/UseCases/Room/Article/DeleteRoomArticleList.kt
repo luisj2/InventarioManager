@@ -13,6 +13,6 @@ class DeleteRoomArticleList(
         articleIdList: List<Long>
     ): SuspendResult<Boolean> {
         if (articleIdList.isEmpty()) return SuspendResult.Success(true)
-        return repository.deleteArticleByIdList(zoneId, articleIdList)
+        return repository.removeArticleByIdList(zoneId, articleIdList)
     }
 }

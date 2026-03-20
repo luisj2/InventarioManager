@@ -1,6 +1,6 @@
 package com.xluis.inventarioefa.domain.model.Database.Firebase.Firestore.User
 
-import com.xluis.inventarioefa.data.Model.User.UserFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.User.UserFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 
 interface UserFirestoreQuery {
@@ -9,6 +9,8 @@ interface UserFirestoreQuery {
 
     // GET
     suspend fun getUserById(userId: String): SuspendResult<UserFirestore?>
+
+    suspend fun getUserNameById (userId : String) : SuspendResult<String>
 
     suspend fun getIdByEmail (email : String) : SuspendResult<String>
 }

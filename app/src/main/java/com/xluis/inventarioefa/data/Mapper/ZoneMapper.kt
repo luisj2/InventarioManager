@@ -6,8 +6,9 @@ import com.xluis.inventarioefa.data.Model.Room.Relactions.ZoneWithArticlesAndMov
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleMovementsEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ZoneEntity
-import com.xluis.inventarioefa.data.Model.Zone.ZoneFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Zone.ZoneFirestore
 import com.xluis.inventarioefa.data.Model.ZoneEntitiesBundle
+import com.xluis.inventarioefa.data.Model.Firestore.ZoneFullFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 
 // ============================================================
@@ -47,6 +48,7 @@ fun Zone.toZoneEntity(): ZoneEntity {
     return ZoneEntity(
         id = this.id?.toLongOrNull() ?: 0, // Room requiere PK no nula
         name = this.name,
+        userId = this.ownerId ?: "",
         childIdList = this.childIdList?.map { it.toLongOrNull() ?: 0 },
         parentIdList = this.parentIdList?.map { it.toLongOrNull() ?: 0 }
     )
@@ -74,7 +76,7 @@ fun Zone.toMovementEntities(): List<ArticleMovementsEntity> {
     return this.movementList.map { mov ->
         ArticleMovementsEntity(
             id = 0, // autoGenerate
-            articleId = mov.articleId,
+            articleId = mov.articleId.toLongOrNull() ?: 0,
             articleName = mov.articleName,
             zoneId = zoneId.toLongOrNull() ?: 0,
             count = mov.count,
@@ -105,5 +107,18 @@ fun ZoneWithArticlesAndMovements.toDomain(): Zone {
         parentIdList = this.zone.parentIdList?.map { it.toString() },
         articleList = this.articles.map { it.toDomain() },
         movementList = this.movements.map { it.toDomain() }
+    )
+}
+fun ZoneFullFirestore.toDomain(): Zone {
+    return Zone(
+        id = this.zone.id,
+        name = this.zone.name ?: "",
+        storageType = StorageType.FIREBASE,
+        ownerId = this.zone.ownerId,
+        membersId = this.zone.membersId ?: emptyList(),
+        childIdList = this.zone.childIdList ?: emptyList(),
+        parentIdList = this.zone.parentIdList ?: emptyList(),
+        articleList = this.articleList.map { it.toDomain() },
+        movementList = this.movementList.map { it.toDomain() }
     )
 }

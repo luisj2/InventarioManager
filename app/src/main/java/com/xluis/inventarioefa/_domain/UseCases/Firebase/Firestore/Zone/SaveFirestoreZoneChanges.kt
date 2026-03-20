@@ -6,8 +6,8 @@ import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleMovementRepository
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleZoneFirestoreRepository
-import com.xluis.inventarioefa.data.Model.Article.ArticleFirestore
-import com.xluis.inventarioefa.data.Model.Movement.ArticleMovementFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Article.ArticleFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Movement.ArticleMovementFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 
 class SaveFirestoreZoneChanges(

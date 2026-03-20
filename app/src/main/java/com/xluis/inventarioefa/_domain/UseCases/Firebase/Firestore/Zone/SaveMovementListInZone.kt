@@ -1,7 +1,7 @@
 package com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone
 
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleMovementRepository
-import com.xluis.inventarioefa.data.Model.Movement.ArticleMovementFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Movement.ArticleMovementFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 
 class SaveMovementListInZone(

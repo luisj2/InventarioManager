@@ -2,9 +2,9 @@ package com.xluis.inventarioefa._domain.UseCases
 
 import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
+import com.xluis.inventarioefa._domain.util.toValidationResult
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ZoneFirestoreRepository
 import com.xluis.inventarioefa.data.Database.Room.Zone.ZoneRoomRepository
-import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 
 class RemoveZoneListCase(
@@ -12,46 +12,36 @@ class RemoveZoneListCase(
     private val zoneFirestoreRepository: ZoneFirestoreRepository
 ) {
 
-    suspend operator fun invoke(zoneList: List<Zone>): ValidationResult {
+    suspend operator fun invoke(
+        userId: String,
+        zoneList: List<Zone>
+    ): ValidationResult {
 
         for (zone in zoneList) {
 
-            when (zone.storageType) {
+            val zoneId = zone.id ?: continue
 
-                StorageType.LOCAL -> {
-                    val idLong = zone.id?.toLongOrNull()
-                        ?: return ValidationResult.Error("ID inválido para zona local")
-
-                    when (val result = zoneRoomRepository.removeZone(idLong)) {
-                        is SuspendResult.Success -> {
-                            if (!result.data)
-                                return ValidationResult.Error("No se pudo borrar la zona local con id $idLong")
-                        }
-                        is SuspendResult.Error -> {
-                            return ValidationResult.Error(result.message)
-                        }
-                        else -> return ValidationResult.Error("Error inesperado")
-                    }
-                }
-
-                StorageType.FIREBASE -> {
-                    val id = zone.id
-                        ?: return ValidationResult.Error("ID inválido para zona Firebase")
-
-                    when (val result = zoneFirestoreRepository.deleteZoneById(id)) {
-                        is SuspendResult.Success -> {
-                            if (!result.data)
-                                return ValidationResult.Error("No se pudo borrar la zona Firebase con id $id")
-                        }
-                        is SuspendResult.Error -> {
-                            return ValidationResult.Error(result.message)
-                        }
-                        else -> return ValidationResult.Error("Error inesperado")
-                    }
-                }
-            }
+            removeZone(userId, zoneId, zone.storageType)
         }
 
         return ValidationResult.Success
     }
+
+
+    private suspend fun removeZone(
+        userId : String,
+        zoneId: String,
+        storageType: StorageType
+    ): ValidationResult =
+        when (storageType) {
+            StorageType.LOCAL -> zoneId.toLongOrNull()
+                ?.let { zoneRoomRepository.removeZone(it) }
+                ?.toValidationResult("No se ha podido eliminar la zona")
+                ?: ValidationResult.Error("ID inválido para zona local")
+
+            StorageType.FIREBASE -> zoneFirestoreRepository
+                .deleteZoneById(userId,zoneId)
+                .toValidationResult("No se ha podido eliminar la zona")
+        }
+
 }

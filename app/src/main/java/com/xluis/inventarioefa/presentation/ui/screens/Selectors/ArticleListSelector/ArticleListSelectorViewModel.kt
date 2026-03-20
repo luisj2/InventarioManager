@@ -4,7 +4,9 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserLoggedUsername
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreZoneNameById
+import com.xluis.inventarioefa._domain.UseCases.Room.AddArtilesAndMovementSelected
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.CreateArticleCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.GetAllArticles
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.GetRoomZoneNameById
@@ -16,18 +18,22 @@ import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa.data.Database.Datastore.UserDataStore
 import com.xluis.inventarioefa.data.Mapper.Article.toEntity
+import com.xluis.inventarioefa.data.Mapper.Article.toSelectedEntity
+import com.xluis.inventarioefa.data.Mapper.toMovementSelectedEntity
 import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
-import com.xluis.inventarioefa.utils.YOUR_MOVEMENT_ROOM
+import com.xluis.inventarioefa.utils.YOUR_MOVE_ROOM
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-class ArticleListSelectorViewModel(
+class ArticleListSelectorViewModel (
     private val getRoomArticles: GetAllArticles,
     private val getFirestoreZoneNameById: GetFirestoreZoneNameById,
     private val getRoomZoneNameById: GetRoomZoneNameById,
-    private val createArticle: CreateArticleCase
+    private val createArticle: CreateArticleCase,
+    private val addArtilesAndMovementSelected : AddArtilesAndMovementSelected,
+    private val getUserLoggedUsername: GetUserLoggedUsername
 ) : ViewModel() {
 
     private val _uiState = mutableStateOf(ArticleListSelectorUiState())
@@ -72,7 +78,7 @@ class ArticleListSelectorViewModel(
             is ArticleListSelectorUiEvent.AddArticle -> {
                 addArticleInDatabase(event.article)
             }
-            is ArticleListSelectorUiEvent.InitValues -> updateState { copy(storageType = StorageType.fromName(event.storageType),zoneId = event.zoneId) }
+            is ArticleListSelectorUiEvent.InitValues -> updateState { copy(storageType = StorageType.fromName(event.storageType),zoneId = event.zoneId, screenId = event.screenId) }
             is ArticleListSelectorUiEvent.OnCategoryChanged -> {
                 updateState { copy(selectedCategory = event.category) }
                 applyFilters()
@@ -172,7 +178,7 @@ class ArticleListSelectorViewModel(
             val state = _uiState.value
 
             val userId : String = when (_uiState.value.storageType){
-                StorageType.LOCAL -> YOUR_MOVEMENT_ROOM
+                StorageType.LOCAL -> YOUR_MOVE_ROOM
                 StorageType.FIREBASE -> {
                     state.userId ?: run {
                         showToast("Usuario no identificado")
@@ -180,23 +186,31 @@ class ArticleListSelectorViewModel(
                     }
                 }
             }
+            val screenId = state.screenId
 
-            val movements = state.selectedArticleList.map { article ->
+            val articleSelectedList = state.selectedArticleList.map { it.copy(zoneId = state.zoneId) }
+            val userName = when(_uiState.value.storageType){
+                StorageType.LOCAL -> YOUR_MOVE_ROOM
+                StorageType.FIREBASE -> getUserLoggedUsername(userId).getOrNull() ?: "???"
+            }
+
+            val movementSelected = articleSelectedList.map { article ->
                 articleToArticleMovement(
                     article = article,
                     userId = userId,
                     action = MovementAction.ADD,
+                    userName = userName,
                     zoneId = state.zoneId,
                     zoneName = getZoneNameById(state.zoneId)
                 )
             }
 
-            _uiEffect.send(
-                ArticleListSelectorUiEffect.ArticlesSaved(
-                    selectedArticles = state.selectedArticleList,
-                    selectedMovements = movements
-                )
+            addArtilesAndMovementSelected(
+                articleSelectedList = articleSelectedList.map { it.toSelectedEntity(screenId) },
+                movementSelectedList = movementSelected.map { it.toMovementSelectedEntity(screenId) }
             )
+                .onSuccess { navigateBack() }
+                .onError { showToast(it.message) }
         }
     }
     private suspend fun getZoneNameById (zoneId : String) : String{

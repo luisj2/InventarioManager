@@ -10,8 +10,10 @@ import com.xluis.inventarioefa.data.Model.Room.Relactions.ZoneWithArticlesAndMov
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleMovementsEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ZoneEntity
+import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.domain.model.Database.Room.Article.ArticleZoneDao
+import kotlinx.coroutines.flow.Flow
 
 class ZoneRoomRepository(
     private val zoneDao: ZoneDao,
@@ -39,15 +41,21 @@ class ZoneRoomRepository(
         }
     }
 
-    suspend fun getZoneFull(zoneId: String): SuspendResult<ZoneWithArticlesAndMovements?> {
+    suspend fun getZoneFull(zoneId: Long): SuspendResult<ZoneWithArticlesAndMovements?> {
         return executeRoomOperation {
             zoneDao.getZoneFull(zoneId)
         }
     }
 
-    suspend fun getAllZonesFull(): SuspendResult<List<ZoneWithArticlesAndMovements?>> {
+    suspend fun getZoneById (zoneId : Long) : SuspendResult<ZoneEntity?>{
         return executeRoomOperation {
-            zoneDao.getAllZoneFull()
+            zoneDao.getZoneById(zoneId)
+        }
+    }
+
+    suspend fun getAllZonesFull(userId : String): SuspendResult<List<ZoneWithArticlesAndMovements?>> {
+        return executeRoomOperation {
+            zoneDao.getAllZoneFull(userId)
         }
     }
 
@@ -102,26 +110,31 @@ class ZoneRoomRepository(
 
         // 4️⃣ Insertar artículos asociados a esta zona
         if (bundle.articles.isNotEmpty()) {
+            // 1️⃣ Preparar artículos para insertar con el newChildId
             val articlesToInsert = bundle.articles.map { it.copy(zoneId = newChildId) }
-            articleZoneDao.insertArticles(articlesToInsert)
-        }
 
-        // 5️⃣ Insertar movimientos automáticos para cada artículo
-        if (bundle.articles.isNotEmpty()) {
+            // 2️⃣ Insertar artículos y obtener los IDs generados por Room
+            val articlesIdList: List<Long> = articleZoneDao.insertArticles(articlesToInsert)
+
+            // 3️⃣ Crear movimientos usando los IDs generados
             val now = java.time.LocalDateTime.now()
-            val movements = bundle.articles.map { article ->
+            val movements = articlesToInsert.zip(articlesIdList).map { (article, generatedId) ->
                 ArticleMovementsEntity(
-                    articleId = article.id.toString(),
+                    articleId = generatedId,
                     articleName = article.name,
                     zoneId = newChildId,
                     count = article.count,
-                    actionType = "CREATED",
+                    actionType = MovementAction.ADD.displayName,
                     zoneName = child.name,
                     date = now
                 )
             }
+
+            // 4️⃣ Insertar movimientos en la base de datos
             movementDao.insertMovements(movements)
         }
+
+
 
         ValidationResult.Success
     }
@@ -152,11 +165,66 @@ class ZoneRoomRepository(
         }
     }
 
+    fun getArticleListByZoneIdFlow(zoneId: Long): Flow<List<ArticleZoneEntity>> {
+        return articleZoneDao.getArticleListByZoneIdFlow(zoneId)
+    }
+
+    fun getMovementsListByZoneIdFlow(zoneId : Long) : Flow<List<ArticleMovementsEntity>>{
+        return movementDao.getMovementsListByZoneIdFlow(zoneId)
+    }
     suspend fun getZoneNameById (zoneId : Long) : SuspendResult<String>{
         return executeRoomOperation {
-            zoneDao.getZoneNameById(zoneId)
+            zoneDao.getZoneNameById(zoneId) ?: ""
         }
     }
+
+    suspend fun upsertArticlesAndMovements(
+        zoneId : Long,
+        articles: List<ArticleZoneEntity>,
+        movements: List<ArticleMovementsEntity>
+    ) : SuspendResult<Boolean>{
+        return executeRoomOperation {
+            zoneDao.upsertArticlesAndMovements(zoneId,articles,movements)
+            true
+        }
+    }
+
+    suspend fun insertOrUpdateArticleCount(
+        zoneId : Long,
+        articleToUpdate : ArticleZoneEntity,
+    ) : SuspendResult<Boolean>{
+        return executeRoomOperation {
+            zoneDao.insertOrUpdateArticleCount(zoneId,articleToUpdate)
+            true
+        }
+
+    }
+
+    suspend fun upsertArticleAndMovement(
+        zoneId: Long,
+        article : ArticleZoneEntity,
+        movement : ArticleMovementsEntity
+    ) : SuspendResult<Boolean>{
+        return executeRoomOperation {
+            zoneDao.upsertArticleAndMovement(zoneId,article,movement)
+            true
+        }
+    }
+    suspend fun updateOrDeleteArticlesAndMovements(
+        zoneId : Long,
+        articleId: Long,
+        quantityToRemove: Int,
+        movement: ArticleMovementsEntity
+    ) : SuspendResult<Boolean>{
+        return executeRoomOperation {
+            zoneDao.updateOrDeleteArticlesAndMovements(
+               zoneId, articleId,quantityToRemove,movement
+            )
+            true
+        }
+    }
+
+
 
 }
 

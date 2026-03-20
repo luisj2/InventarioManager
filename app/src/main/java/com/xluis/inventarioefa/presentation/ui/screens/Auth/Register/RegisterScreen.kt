@@ -32,7 +32,7 @@ import com.xluis.inventarioefa.utils.toast
 @Composable
 fun RegisterScreen(
     viewModel: RegisterViewModel = viewModel(),
-    onNavigateToLogin : () -> Unit
+    onNavigateToLogin : (email : String,password : String) -> Unit
 ) {
     val uiState by viewModel.uiState
     val context = LocalContext.current
@@ -41,7 +41,7 @@ fun RegisterScreen(
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 is RegisterUiEffect.ShowToast -> context.toast(effect.message)
-                RegisterUiEffect.NavigateToLogin -> onNavigateToLogin()
+                is RegisterUiEffect.NavigateToLogin -> onNavigateToLogin(effect.email,effect.password)
             }
         }
     }

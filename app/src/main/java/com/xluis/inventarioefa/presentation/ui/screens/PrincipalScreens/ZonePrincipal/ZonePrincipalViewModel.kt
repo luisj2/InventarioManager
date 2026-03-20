@@ -5,9 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.IsUserLoggedIn
-import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreUserZones
+import com.xluis.inventarioefa._domain.UseCases.GetAllZoneList
 import com.xluis.inventarioefa._domain.UseCases.RemoveZoneListCase
-import com.xluis.inventarioefa._domain.UseCases.Room.Zone.GetRoomZoneList
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
 import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
@@ -20,8 +19,7 @@ import kotlinx.coroutines.launch
 
 
 class ZonePrincipalViewModel(
-    private val getFirestoreUserZones: GetFirestoreUserZones,
-    private val getRoomZoneList: GetRoomZoneList,
+    private val getAllZoneList: GetAllZoneList,
     private val isUserLoggedIn: IsUserLoggedIn,
     private val removeZoneListCase: RemoveZoneListCase
 ) : ViewModel() {
@@ -41,7 +39,7 @@ class ZonePrincipalViewModel(
         viewModelScope.launch {
             UserDataStore.getUserUid().collect { uid ->
                 updateState { copy(userId = uid) }
-                if(uid != null) callAndUpdateUserZoneList()
+                if (uid != null) callAndUpdateUserZoneList()
             }
         }
     }
@@ -155,7 +153,6 @@ class ZonePrincipalViewModel(
             }
 
 
-
             ZonePrincipalUiEvent.ClearSelectedDeleteZoneList -> _uiState.value =
                 _uiState.value.copy(selectionToRemoveZones = setOf())
 
@@ -163,8 +160,8 @@ class ZonePrincipalViewModel(
                 updateState {
                     copy(
                         filters = filters
-                            .filterNot { it.type == event.filter.type } // elimina cualquier filtro del mismo tipo
-                            .plus(event.filter)                          // añade el nuevo filtro
+                            .filterNot { it.type == event.filter.type }
+                            .plus(event.filter)
                     )
                 }
                 applyFilters()
@@ -174,6 +171,7 @@ class ZonePrincipalViewModel(
                 updateState { copy(searchQuery = event.query) }
                 applyFilters()
             }
+
             is ZonePrincipalUiEvent.OnRemoveFilter -> {
                 updateState {
                     copy(
@@ -192,11 +190,15 @@ class ZonePrincipalViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             val state = _uiState.value
+            val userId = state.userId ?: return@launch showToast("El id del usuario no es valido")
 
-            removeZoneListCase(state.selectionToRemoveZones.toList())
-                .onError { error ->
-                    showToast(error.message)
+            removeZoneListCase(userId, state.selectionToRemoveZones.toList())
+                .onSuccess {
+                    _uiState.value =
+                        _uiState.value.copy(selectionMode = false, selectionToRemoveZones = setOf())
+                    callAndUpdateUserZoneList()
                 }
+                .onError { error -> showToast(error.message) }
 
             _uiState.value = _uiState.value.copy(isLoading = false)
         }
@@ -205,29 +207,17 @@ class ZonePrincipalViewModel(
 
     private fun callAndUpdateUserZoneList() {
         viewModelScope.launch {
-            val userId = _uiState.value.userId
-            var firebaseList = listOf<Zone>()
-            var roomList = listOf<Zone>()
-
-            if (userId != null) {
-                getFirestoreUserZones(userId)
-                    .onSuccess { firebaseZones ->
-                        firebaseList = firebaseZones
-                    }
-                    .onError { error ->
-                        showToast(error.message)
-                    }
+            val userId = _uiState.value.userId ?: run {
+                showToast("No se ha encontrado el usuario")
+                return@launch
             }
 
-            getRoomZoneList()
-                .onSuccess { roomZones ->
-                    roomList = roomZones
+            getAllZoneList(userId)
+                .onSuccess { allZoneList ->
+                    updateState { copy(allZoneList = allZoneList) }
                 }
-                .onError { error ->
-                    showToast(error.message)
-                }
+                .onError { error -> showToast(error.message) }
 
-            updateState { copy(allZoneList = firebaseList + roomList) }
             applyFilters()
         }
     }
@@ -237,6 +227,7 @@ class ZonePrincipalViewModel(
             _uiEffect.send(ZonePrincipalUiEffect.ShowToast(message))
         }
     }
+
     private fun applyFilters() {
         val state = _uiState.value
 

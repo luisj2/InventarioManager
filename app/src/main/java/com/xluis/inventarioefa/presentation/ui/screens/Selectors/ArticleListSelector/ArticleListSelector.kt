@@ -36,8 +36,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.xluis.inventarioefa._domain.model.DataClass.ArticleMovement
-import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa._domain.model.Enums.SortType
 import com.xluis.inventarioefa.utils.ArticleItem
 import com.xluis.inventarioefa.utils.DefaultButton
@@ -51,7 +49,7 @@ fun ArticleListSelector(
     viewModel: ArticleListSelectorViewModel,
     storageType : String,
     zoneId : String,
-    onConfirmSelection : (selectedArticles :List<Article>,selectedMovements: List<ArticleMovement>) -> Unit,
+    screenId : String,
     navigateBack: () -> Unit
 ) {
 
@@ -59,7 +57,7 @@ fun ArticleListSelector(
     val uiState by viewModel.uiState
 
     LaunchedEffect(Unit) {
-        viewModel.onEvent(ArticleListSelectorUiEvent.InitValues(storageType,zoneId))
+        viewModel.onEvent(ArticleListSelectorUiEvent.InitValues(storageType,zoneId,screenId))
         viewModel.onEvent(ArticleListSelectorUiEvent.GetAllArticles)
     }
 
@@ -67,10 +65,6 @@ fun ArticleListSelector(
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 ArticleListSelectorUiEffect.NavigateBack -> navigateBack()
-                is ArticleListSelectorUiEffect.ArticlesSaved -> {
-                    onConfirmSelection(effect.selectedArticles,effect.selectedMovements)
-                }
-
                 is ArticleListSelectorUiEffect.ShowToast -> context.toast(effect.message)
             }
         }
@@ -140,7 +134,6 @@ private fun ArticleSelectorContent(
                     onClick = {
                         if (articleList.isNotEmpty()) {
                             onEvent(ArticleListSelectorUiEvent.SaveSelectedArticles)
-                            onEvent(ArticleListSelectorUiEvent.NavigateBack)
                         } else {
                             showToast("Añade un artículo")
                         }

@@ -7,4 +7,10 @@ sealed class CreateZoneUiEffect {
     data object NavigateToZoneSelector : CreateZoneUiEffect()
     data class ShowToast (val message : String) : CreateZoneUiEffect()
 
+    data object ClearScreenArticleList : CreateZoneUiEffect()
+
+    data class RemoveArticle (val articleId : String) : CreateZoneUiEffect()
+
+    data class DeleteArticleInList (val articleId : String) : CreateZoneUiEffect()
+
 }

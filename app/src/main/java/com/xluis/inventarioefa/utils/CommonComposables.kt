@@ -41,10 +41,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -852,8 +853,6 @@ fun IconDropDownSelector(
 }
 
 
-
-
 @Composable
 fun DefaultButton(
     contentText: String,
@@ -1123,7 +1122,8 @@ fun ArticleItem(
     isArticleSelected: Boolean = false,
     selectedColor: Color = Color.Blue,
     unselectedColor: Color = Color.Gray,
-    showCount: Boolean = true,   // 👈 NUEVO
+    showCount: Boolean = true,
+    onDelete: (() -> Unit)? = null,
     onSelectArticle: ((count: Int) -> Unit)? = null,
     onLongPress: ((Article) -> Unit)? = null
 ) {
@@ -1168,7 +1168,6 @@ fun ArticleItem(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 👇 SOLO SE MUESTRA SI showCount = true
             if (showCount) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
 
@@ -1201,13 +1200,21 @@ fun ArticleItem(
                     ) {
                         Text("+", color = Color.White)
                     }
+
+                    if (onDelete != null) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.Red
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
-
-
 
 
 @Composable
@@ -1216,7 +1223,7 @@ fun ArticleList(
     articles: List<Article>,
     selectedArticle: Article? = null,
     onArticleSelected: ((article: Article) -> Unit)? = null,
-    showCount : Boolean = true,
+    showCount: Boolean = true,
     onLongPress: ((Article) -> Unit)? = null
 ) {
     LazyColumn(
@@ -1243,7 +1250,7 @@ fun ArticleList(
 fun MovementsList(
     modifier: Modifier = Modifier,
     movementsList: List<ArticleMovement>
-) {
+    ) {
     LazyColumn(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1255,16 +1262,15 @@ fun MovementsList(
 }
 
 
-
 @Composable
 fun MovementItem(
-    movement: ArticleMovement
+    movement: ArticleMovement,
 ) {
     val (actionText, actionColor, actionIcon) = when (movement.actionType) {
         MovementAction.TAKE -> Triple("Tomado", Color.Red, Icons.Default.ArrowDownward)
-        MovementAction.RETURN -> Triple("Devuelto", Color.Green, Icons.Default.ArrowUpward)
         MovementAction.ADD -> Triple("Añadido", Color.Blue, Icons.Default.Add)
     }
+
 
     Card(
         modifier = Modifier
@@ -1303,11 +1309,13 @@ fun MovementItem(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                Text(
-                    text = "Zona: ${movement.zoneName}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF444444)
-                )
+                if(movement.zoneName.isNotBlank()){
+                    Text(
+                        text = "Zona: ${movement.zoneName}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF444444)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(2.dp))
 
@@ -1315,6 +1323,14 @@ fun MovementItem(
                     text = "Artículo: ${movement.articleName}",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.DarkGray
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "Realizado por: ${movement.userName}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -1328,7 +1344,6 @@ fun MovementItem(
         }
     }
 }
-
 
 
 @Composable
@@ -1523,11 +1538,12 @@ private fun ZoneTree(
         }
     }
 }
+
 @Composable
 fun SimpleZoneSelector(
-    zones: List<Zone>, // Lista de todas las zonas a mostrar
-    selectedZoneIds: List<String> = emptyList(), // Zonas seleccionadas
-    onZoneClick: (Zone) -> Unit, // Callback al hacer click en un item
+    zones: List<Zone>,
+    selectedZoneIds: List<String> = emptyList(),
+    onZoneClick: (Zone) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(modifier = modifier.fillMaxSize()) {
@@ -1550,27 +1566,45 @@ fun SimpleZoneItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFFD1E8FF) else Color.White
+            containerColor = if (isSelected) Color(0xFFD1E8FF) else Color(0xFFF9F9F9)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icono según tipo de almacenamiento
+            val typeIcon = when(zone.storageType) {
+                StorageType.LOCAL -> Icons.Default.Lock
+                StorageType.FIREBASE -> Icons.Default.Group
+            }
+
+            Icon(
+                imageVector = typeIcon,
+                contentDescription = if(zone.storageType == StorageType.LOCAL) "Privada" else "Compartida",
+                tint = if(zone.storageType == StorageType.LOCAL) Color.Red else Color.Green,
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .size(20.dp)
+            )
+
+            // Nombre de la zona
             Text(
                 text = zone.name,
                 style = MaterialTheme.typography.bodyLarge,
-                color = if (isSelected) Color(0xFF0D47A1) else Color.Black,
+                color = if (isSelected) Color(0xFF0D47A1) else Color(0xFF212121),
                 modifier = Modifier.weight(1f)
             )
 
-            if (isSelected) {
+            // Icono de seleccionado
+            AnimatedVisibility(visible = isSelected) {
                 Icon(
                     imageVector = Icons.Default.CheckBox,
                     contentDescription = "Seleccionado",
@@ -1580,7 +1614,6 @@ fun SimpleZoneItem(
         }
     }
 }
-
 
 
 // Elemento individual de zona
@@ -1598,8 +1631,12 @@ fun ZoneItem(
     onExpandClick: (() -> Unit)? = null
 ) {
 
-    val cardColor = if (zone in selectedZones) Color(0xFFBBDEFB) // azul claro
-    else getZoneCardColor(level)
+    val cardColor = when {
+        zone in selectedZones -> Color(0xFFBBDEFB) // seleccionado
+        zone.storageType == StorageType.LOCAL -> Color(0xFFE8F5E9) // verde claro
+        zone.storageType == StorageType.FIREBASE -> Color(0xFFFFF3E0) // naranja claro
+        else -> getZoneCardColor(level)
+    }
 
     Card(
         modifier = modifier

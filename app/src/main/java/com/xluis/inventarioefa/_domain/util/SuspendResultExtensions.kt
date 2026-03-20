@@ -35,6 +35,9 @@ suspend fun <T> SuspendResult<T>.toValidationResult(
 }
 
 
+
+
+
     inline fun <T, R> SuspendResult<T>.flatMap(
         transform: (T) -> SuspendResult<R>
     ): SuspendResult<R> = when (this) {
@@ -42,6 +45,23 @@ suspend fun <T> SuspendResult<T>.toValidationResult(
         is SuspendResult.Error -> this
         else -> SuspendResult.Error("Estado inválido")
     }
+inline fun <T> runSuspendCatching(
+    block: () -> T
+): SuspendResult<T> =
+    try {
+        SuspendResult.Success(block())
+    } catch (e: Exception) {
+        SuspendResult.Error(e.message ?: "Error inesperado")
+    }
+
+inline fun <T, R> SuspendResult<T>.map(
+    transform: (T) -> R
+): SuspendResult<R> = when (this) {
+    is SuspendResult.Success -> SuspendResult.Success(transform(data))
+    is SuspendResult.Error -> this
+    SuspendResult.Idle -> SuspendResult.Idle
+    SuspendResult.Loading -> SuspendResult.Loading
+}
 
 inline fun <T> SuspendResult<T>.onSuccess(action: (T) -> Unit): SuspendResult<T> {
     if (this is SuspendResult.Success) action(data)
@@ -57,6 +77,12 @@ inline fun <T> SuspendResult<T>.showErrorToast(show: (String?) -> Unit): Suspend
     if (this is SuspendResult.Error) show(this.message)
     return this
 }
+fun SuspendResult<*>.orThrow() {
+    if (this is SuspendResult.Error) {
+        throw Exception(this.message)
+    }
+}
+
 
 
 

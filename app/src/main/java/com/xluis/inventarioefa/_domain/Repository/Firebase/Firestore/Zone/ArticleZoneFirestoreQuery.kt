@@ -1,7 +1,8 @@
 package com.xluis.inventarioefa._domain.Repository.Firebase.Firestore.Zone
 
-import com.xluis.inventarioefa.data.Model.Article.ArticleFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Article.ArticleFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
+import kotlinx.coroutines.flow.Flow
 
 interface ArticleZoneFirestoreQuery {
 
@@ -16,8 +17,12 @@ interface ArticleZoneFirestoreQuery {
         articleList: List<ArticleFirestore>
     ): SuspendResult<Boolean>
 
+
+
     // GET
     suspend fun getArticleListByZoneId(zoneId: String): SuspendResult<List<ArticleFirestore>>
+
+    fun getArticleListByZoneIdFlow (zoneId : String) : Flow<List<ArticleFirestore>>
 
     suspend fun getArticleById(zoneId: String, articleId: String): SuspendResult<ArticleFirestore?>
 
@@ -35,6 +40,12 @@ interface ArticleZoneFirestoreQuery {
         articleId: String,
         addCount: Int
     ): SuspendResult<Boolean>
+
+    suspend fun changeArticleCount(
+        zoneId : String,
+        articleId : String,
+        newCount : Int
+    ) : SuspendResult<Boolean>
 
     suspend fun updateArticleById(
         zoneId: String,
@@ -56,7 +67,7 @@ interface ArticleZoneFirestoreQuery {
 
     suspend fun deleteArticlesByZoneId(zoneId: String): SuspendResult<Boolean>
 
-    suspend fun deleteArticleListByIdList (zoneId : String,idList : List<String>) :SuspendResult<Boolean>
+    suspend fun removeArticleListByIdList (zoneId : String, idList : List<String>) :SuspendResult<Boolean>
 
     suspend fun removeArticleCount(
         zoneId: String,

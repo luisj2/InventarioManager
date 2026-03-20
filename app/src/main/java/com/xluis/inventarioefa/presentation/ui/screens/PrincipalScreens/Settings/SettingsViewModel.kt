@@ -44,6 +44,8 @@ class SettingsViewModel(
             SettingsUiEvent.OnLoginClicked -> onLoginClicked()
             SettingsUiEvent.OnLogoutClicked -> logOutClick()
             SettingsUiEvent.NavigateToLogin -> navigateToLogin()
+            SettingsUiEvent.DissmissLogoutDialog -> updateState { copy(showConfirmLogoutDialog = false) }
+            SettingsUiEvent.ShowConfirmLogoutDialog -> updateState { copy(showConfirmLogoutDialog = true) }
         }
     }
 

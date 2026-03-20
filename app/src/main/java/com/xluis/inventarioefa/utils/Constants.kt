@@ -44,6 +44,12 @@ const val FIRESTORE_ZONE_NAME_FIELD = "name"
 const val FIRESTORE_MOVEMENTS_ZONEID_FIELD = "zoneId"
 const val FIRESTORE_MOVEMENTS_USERID_FIELD = "userId"
 
+//Firestore Article Fields
+const val FIRESTORE_ARTICLE_COUNT_FIELD = "count"
+
+//Firestore Request Fields
+const val FIRESTORE_ZONEREQUEST_ZONEID_FIELD = "zoneId"
+
 //DATASTORE
 //USER DATASTORE
 const val USER_PREFS_KEY = "user_prefs"
@@ -51,6 +57,6 @@ const val USER_DATASTORE_UID = "user_uid"
 
 //OTHER
 const val SVG_CODE = "image/svg+xml"
-const val YOUR_MOVEMENT_ROOM = "Tu"
+const val YOUR_MOVE_ROOM = "Tu"
 const val SELECTED_ARTICLES_KEY = "selected_articles"
 const val SELECTED_MOVEMENTS_KEY = "selected_movements"

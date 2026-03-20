@@ -23,7 +23,7 @@ object FirestoreExceptionHandler {
             is IOException -> "Problemas de red, verifica tu conexión"
             else -> {
                 Log.e(TAG, "Error inesperado: ${e.message}", e)
-                "Error Inesperado"
+                "Error Inesperado : ${e.message}"
             }
         }
     }

@@ -12,9 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.xluis.inventarioefa._domain.model.Enums.DateMode
 import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import com.xluis.inventarioefa.utils.DefaultButton
 import com.xluis.inventarioefa.utils.DefaultDropDownSelector
@@ -27,7 +27,6 @@ fun YourMovementsScreen(
     viewModel: YourMovementsViewModel = viewModel()
 ) {
 
-    val context = LocalContext.current
     val uiState by viewModel.uiState
 
 
@@ -58,17 +57,26 @@ private fun YourMovementContent(
         MovementFilterBar(
             searchQuery = uiState.searchQuery,
             selectedAction = uiState.selectedAction,
-            isDescending = uiState.sortDescending,
+            dateMode = uiState.dateMode,
             onSearch = { onEvent(YourMovementsUiEvents.OnSearchChanged(it)) },
             onActionSelected = { onEvent(YourMovementsUiEvents.OnActionFilterChanged(it)) },
-            onDateSortChanged = { }
+            onToggleDate = { onEvent(YourMovementsUiEvents.OnToggleDate)}
         )
 
-        // Lista filtrada
-        MovementsList(
-            modifier = Modifier.fillMaxWidth(),
-            movementsList = uiState.filteredMovements
-        )
+        // 🔹 Lista o mensaje vacío
+        if (uiState.filteredMovements.isEmpty()) {
+            Text(
+                text = "No has hecho ningún movimiento",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 24.dp),
+            )
+        } else {
+            MovementsList(
+                modifier = Modifier.fillMaxWidth(),
+                movementsList = uiState.filteredMovements
+            )
+        }
     }
 }
 
@@ -77,10 +85,10 @@ private fun YourMovementContent(
 fun MovementFilterBar(
     searchQuery: String,
     selectedAction: MovementAction?,
-    isDescending: Boolean,
+    dateMode : DateMode,
     onSearch: (String) -> Unit,
     onActionSelected: (MovementAction?) -> Unit,
-    onDateSortChanged: (Boolean) -> Unit
+    onToggleDate: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -107,15 +115,15 @@ fun MovementFilterBar(
                 selectedOption = selectedAction?.name ?: "Todos",
                 onOptionSelected = { option ->
                     if (option == "Todos") onActionSelected(null)
-                    else onActionSelected(MovementAction.valueOf(option))
+                    else onActionSelected(MovementAction.fromName(option))
                 },
                 modifier = Modifier.weight(1f)
             )
 
             // 📅 ORDEN FECHA
             DefaultButton(
-                contentText = if (isDescending) "Fecha ↓" else "Fecha ↑",
-                onClick = { onDateSortChanged(!isDescending) },
+                contentText = dateMode.displayName,
+                onClick = {  onToggleDate() },
                 modifier = Modifier.weight(1f)
             )
         }

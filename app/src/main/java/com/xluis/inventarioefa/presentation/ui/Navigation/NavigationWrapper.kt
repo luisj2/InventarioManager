@@ -1,6 +1,8 @@
 package com.xluis.inventarioefa.presentation.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -10,6 +12,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.xluis.inventarioefa.di.AppDependencies
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
+import com.xluis.inventarioefa.presentation.ViewModel.ArticleMovementsSelectionSharedViewModel
+import com.xluis.inventarioefa.presentation.ViewModel.ArticleSelectionSharedViewModel
 import com.xluis.inventarioefa.presentation.ui.screens.Auth.Login.LoginViewModel
 import com.xluis.inventarioefa.presentation.ui.screens.Auth.MainAuthScreen
 import com.xluis.inventarioefa.presentation.ui.screens.Auth.Register.RegisterViewModel
@@ -37,135 +41,175 @@ import com.xluis.inventarioefa.presentation.ui.screens.forms.CreateZone.CreateZo
 fun NavigationWrapper() {
     val navController = rememberNavController()
 
+    // Lambdas de navegación
     val navigateBack: () -> Unit = { navController.popBackStack() }
     val mainViewModel = getVM<MainScreenViewModel>()
-    val navigateToSetting : () -> Unit = {mainViewModel.onEvent(MainScreenUiEvent.ChangeScreenClick(PrincipalScreen.Settings))}
+    val navigateToSetting =
+        { mainViewModel.onEvent(MainScreenUiEvent.ChangeScreenClick(PrincipalScreen.Settings)) }
+
+    // Shared ViewModel para artículos seleccionados
+    val articleSelectionSharedViewModel: ArticleSelectionSharedViewModel = viewModel()
+    val selectedArticlesByScreen by articleSelectionSharedViewModel.selectedArticlesByScreen.collectAsState()
+    val articleMovementsSelectionSharedViewModel: ArticleMovementsSelectionSharedViewModel =
+        viewModel()
+    val selectedMovementsByScreen by articleMovementsSelectionSharedViewModel.selectedMovementsByScreen.collectAsState()
 
     NavHost(navController = navController, startDestination = Screen.MainScreen) {
 
-
+        // 🔹 Main Screen
         composable<Screen.MainScreen> {
             MainScreen(
                 screenContent = { screenSelected ->
-                    ScreenContentFor(
-                        screenSelected = screenSelected,
-                        navController = navController,
-                        navigateToSetting,
-                        navigateBack = navigateBack
-                    )
+                    when (screenSelected) {
+                        PrincipalScreen.Zones -> ZonePrincipalScreen(
+                            viewModel = getVM<ZonePrincipalViewModel>(),
+                            navigateToCreateZone = { parentZoneId, storageType ->
+                                navController.navigate(Screen.CreateZone(parentZoneId, storageType))
+                            },
+                            navigateToZoneInfo = { zoneId, storageType ->
+                                navController.navigate(Screen.ZoneInfo(zoneId, storageType))
+                            },
+                            navigateToSettings = navigateToSetting
+                        )
+
+                        PrincipalScreen.Settings -> SettingsScreen(
+                            viewModel = getVM<SettingsViewModel>(),
+                            navigateToLogin = { navController.navigate(Screen.MainAuth) },
+                            navigateBack = navigateBack
+                        )
+
+                        PrincipalScreen.Movements -> YourMovementsScreen(viewModel = getVM<YourMovementsViewModel>())
+                        PrincipalScreen.ZoneRequests -> ZoneRequestsScreen(viewModel = getVM<ZoneRequestsViewModel>())
+                    }
                 },
                 viewModel = mainViewModel
             )
         }
 
-        // 🔹 MAIN AUTH
+        // 🔹 Auth
         composable<Screen.MainAuth> {
             MainAuthScreen(
-                navigateMainScreen = {
-                    navController.navigate(Screen.MainScreen)
-                },
+                navigateMainScreen = { navController.navigate(Screen.MainScreen) },
                 loginViewModel = getVM<LoginViewModel>(),
                 registerViewModel = getVM<RegisterViewModel>()
             )
         }
 
-
-
-
-        // 🔹 ZONE PRINCIPAL
+        // 🔹 Zone principal
         composable<Screen.ZonePrincipal> {
             ZonePrincipalScreen(
                 viewModel = getVM<ZonePrincipalViewModel>(),
                 navigateToCreateZone = { parentZoneId, storageType ->
                     navController.navigate(Screen.CreateZone(parentZoneId, storageType))
                 },
-                navigateToZoneInfo = { zoneId,storageType ->
-                    navController.navigate(Screen.ZoneInfo(zoneId,storageType))
+                navigateToZoneInfo = { zoneId, storageType ->
+                    navController.navigate(Screen.ZoneInfo(zoneId, storageType))
                 },
                 navigateToSettings = navigateToSetting
             )
         }
 
-        // 🔹 CREATE ZONE
+        // 🔹 Create Zone
         composable<Screen.CreateZone> { backStackEntry ->
             val args = backStackEntry.toRoute<Screen.CreateZone>()
+            val storageType = StorageType.fromName(args.storageType)
+            val screen = Screen.CreateZone.toString()
             CreateZoneScreen(
                 viewModel = getVM<CreateZoneViewModel>(),
+                articleListToSave = selectedArticlesByScreen[screen] ?: emptyList(),
                 parentZoneId = args.parentZoneId,
-                storageType = StorageType.valueOf(args.storageType),
-                navigateArticleSelector = {navController.navigate(Screen.ArticleListSelector)},
+                storageType = storageType,
+                clearScreenArticles = {
+                    articleSelectionSharedViewModel.clearArticleListByScreenId(
+                        screen
+                    )
+                },
+                removeArticleId = { articleId ->
+                    articleSelectionSharedViewModel.removeArticleByScreenId(
+                        screen,
+                        articleId
+                    )
+                },
+                navigateArticleSelector = {
+                    navController.navigate(
+                        Screen.ArticleListSelector(
+                            storageType.toString(),
+                            null,
+                            screen
+                        )
+                    )
+                },
                 navigateBack = navigateBack
             )
         }
 
-        // 🔹 ZONE INFO
+        // 🔹 Zone Info
         composable<Screen.ZoneInfo> { backStackEntry ->
             val args = backStackEntry.toRoute<Screen.ZoneInfo>()
             val zoneInfoViewModel = getVM<ZoneInfoViewModel>()
-
-
+            val screen = "ZoneInfo"
             ZoneInfoScreen(
                 zoneId = args.zoneId,
                 storageType = args.storageType,
-
                 navigateToArticleSelector = {
                     navController.navigate(
-                        Screen.ArticleListSelector(args.storageType, args.zoneId)
+                        Screen.ArticleListSelector(
+                            args.storageType,
+                            args.zoneId,
+                            screen
+                        )
                     )
                 },
-
-                navigateZoneSelector = { zoneIdToMove, articleIdToMove, articleCountToMove, zoneToMoveStorageType ->
+                navigateZoneSelector = { zoneIdToMove, articleIdToMove, articleCountToMove,zoneFromMoveStorageType, zoneToMoveStorageType ->
                     navController.navigate(
                         Screen.ZoneSelector(
                             zoneIdToMove,
+                            zoneFromMoveStorageType,
                             zoneToMoveStorageType,
                             articleIdToMove,
                             articleCountToMove
                         )
                     )
                 },
-
-                updateZone = { zoneId, storageType ->
-                    zoneInfoViewModel.updateZoneById(zoneId)
-                },
-
+                updateZone = { zoneId, _ -> zoneInfoViewModel.updateZoneById(zoneId) },
                 viewModel = zoneInfoViewModel,
+                screenId = screen,
                 onNavigateBack = navigateBack
             )
         }
 
-
+        // 🔹 Zone Selector
         composable<Screen.ZoneSelector> { backStackEntry ->
             val args = backStackEntry.toRoute<Screen.ZoneSelector>()
             ZoneSelectorScreen(
                 viewModel = getVM<ZoneSelectorViewModel>(),
                 zoneIdFromMove = args.zoneIdFromMove,
                 zoneToMoveStorageType = args.zoneSelectedStorageType,
+                zoneFromMoveStorageType = args.zoneFromMoveStorageType,
                 articleCountToMove = args.articleCountToMove,
                 articleIdToMove = args.articleIdToMove,
                 navigateBack = navigateBack
             )
         }
 
+        // 🔹 Your Movements
         composable<Screen.YourMovements> {
-            YourMovementsScreen(
-                viewModel = getVM<YourMovementsViewModel>()
-            )
+            YourMovementsScreen(viewModel = getVM<YourMovementsViewModel>())
         }
 
-        composable<Screen.ArticleListSelector> { backStackEntry->
+        // 🔹 Article Selector
+        composable<Screen.ArticleListSelector> { backStackEntry ->
             val args = backStackEntry.toRoute<Screen.ArticleListSelector>()
             ArticleListSelector(
                 viewModel = getVM<ArticleListSelectorViewModel>(),
-                zoneId = args.zoneId,
+                zoneId = args.zoneId ?: "",
                 storageType = args.storageType,
-                onConfirmSelection = { selectedArticles, selectedMovements ->
-                    ItemsToSave.articles += selectedArticles
-                    ItemsToSave.movements += selectedMovements
-                },
-                navigateBack = { navController.popBackStack() }
+                screenId = args.screenId,
+                navigateBack = navigateBack
             )
         }
+
+        // 🔹 Settings
         composable<Screen.Settings> {
             SettingsScreen(
                 viewModel = getVM<SettingsViewModel>(),
@@ -178,15 +222,13 @@ fun NavigationWrapper() {
             )
         }
 
-
+        // 🔹 Zone Requests
         composable<Screen.ZoneRequests> {
-            ZoneRequestsScreen(
-                viewModel = getVM<ZoneRequestsViewModel>()
-            )
+            ZoneRequestsScreen(viewModel = getVM<ZoneRequestsViewModel>())
         }
     }
-
 }
+
 
 @Composable
 inline fun <reified VM : ViewModel> getVM(): VM {
@@ -237,4 +279,7 @@ fun ScreenContentFor(
         }
     }
 }
+
+
+
 

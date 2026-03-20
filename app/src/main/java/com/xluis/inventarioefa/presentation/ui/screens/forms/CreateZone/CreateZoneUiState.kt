@@ -3,7 +3,6 @@ package com.xluis.inventarioefa.presentation.ui.screens.forms.CreateZone
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa._domain.model.Zone.ZoneSummary
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 
@@ -19,7 +18,6 @@ data class CreateZoneUiState (
     val zoneNameError : String? = null,
     val parentZoneId : String? = null,
     val parentName : String? = null,
-    val articleSelectedList : List<Article> = emptyList(),
     val isLoading : Boolean = false,
     val isIconSelectorOpen : Boolean = false,
     val page : Int = 1

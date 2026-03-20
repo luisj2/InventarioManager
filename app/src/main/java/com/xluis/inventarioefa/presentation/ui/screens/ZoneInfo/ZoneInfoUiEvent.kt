@@ -9,15 +9,20 @@ sealed class ZoneInfoUiEvent {
 
     data object OpenSVGSelector : ZoneInfoUiEvent()
 
-    data class ImportArticles (val articleList : List<Article>) : ZoneInfoUiEvent()
+    data class ImportArticles(val articleList: List<Article>) : ZoneInfoUiEvent()
 
-    data class ToggleShareDialogState (val state : Boolean) : ZoneInfoUiEvent()
+    data class ToggleShareDialogState(val state: Boolean) : ZoneInfoUiEvent()
 
-    data class ShowToast (val message : String) : ZoneInfoUiEvent()
+    data class ToggleShowMoveDialog(val state : Boolean) : ZoneInfoUiEvent()
+
+
+    data class ShowToast(val message: String) : ZoneInfoUiEvent()
 
     data object InitArticlesAndMovementsList : ZoneInfoUiEvent()
 
-    data class UpdateStorageType (val storageType : String) : ZoneInfoUiEvent()
+    data class InitValues(val storageType: String,val screenId : String) : ZoneInfoUiEvent()
+
+    data object InitToSaveListsFlows : ZoneInfoUiEvent()
 
     data class NavigateToZone(val zoneId: String) : ZoneInfoUiEvent()
 
@@ -27,9 +32,9 @@ sealed class ZoneInfoUiEvent {
 
     data object NavigateBack : ZoneInfoUiEvent()
 
-    data class SaveChanges(val zoneId: String) : ZoneInfoUiEvent()
+    data object SaveChanges : ZoneInfoUiEvent()
 
-    data class ShareZone (val email : String): ZoneInfoUiEvent()
+    data class AddMemeberByEmail(val email: String) : ZoneInfoUiEvent()
 
     data object ShowConfirmLeftDialog : ZoneInfoUiEvent()
 
@@ -38,42 +43,61 @@ sealed class ZoneInfoUiEvent {
     data object ShowAddMovementMenu : ZoneInfoUiEvent()
 
     data object DissmissAddMovementMenu : ZoneInfoUiEvent()
-    data class AddArticlesToSave (val articlesToSaveList : List<Article>) : ZoneInfoUiEvent()
 
-    data class AddArticleToSave (val article : Article) : ZoneInfoUiEvent()
+    data object ShowQuantityDialog : ZoneInfoUiEvent()
+    data object DissmissQuantityDialog : ZoneInfoUiEvent()
 
-    data class AddMovementToSave (val movement : ArticleMovement) : ZoneInfoUiEvent()
+    data class AddRemoveQuantity (val isAdd : Boolean, val quantity : Int) : ZoneInfoUiEvent()
+    data class UpdateArticlesToSaveList(val articleToSaveList: List<Article>) : ZoneInfoUiEvent()
+    data class UpdateMovementsToSaveList(val movementsToSaveList: List<ArticleMovement>) :
+        ZoneInfoUiEvent()
+
+    data class UpdateArticleToModifyQuantity (val articleToModify : Article) : ZoneInfoUiEvent()
 
     data object RemoveArticlesById : ZoneInfoUiEvent()
 
-    data class AddMovementsToSave (val movementsToSave : List<ArticleMovement>) : ZoneInfoUiEvent()
+    data object ClearToSaveLists : ZoneInfoUiEvent()
 
-    data class RemoveArticleToSave (val articleId : String) : ZoneInfoUiEvent()
-    data class RemoveMovementToSave (val articleId : String) : ZoneInfoUiEvent()
 
-    data class SelectArticle(val articleId : String) : ZoneInfoUiEvent()
+    data class RemoveArticleToSave(val articleId: String) : ZoneInfoUiEvent()
 
-    data class DeselectArticle (val idDeselect : String): ZoneInfoUiEvent()
+    data class RemoveArticleInSaveList (val article : Article): ZoneInfoUiEvent()
+    data class RemoveMovementInSaveList (val movementId : String) : ZoneInfoUiEvent()
 
-    data class RemoveMember (val memberId : String) : ZoneInfoUiEvent()
+    data class ChangeMovementCount(val movementId: String, val newCount: Int) : ZoneInfoUiEvent()
 
-    data class MoveSelectedArticle (val selectedArticle : Article) : ZoneInfoUiEvent()
+    data class ChangeArticleCount(val articleId: String, val articleCount: Int) : ZoneInfoUiEvent()
 
-    data class ToggleSelectionDeleteArticleMode (val state : Boolean) : ZoneInfoUiEvent()
+    data class QuantityChanged (val article : Article) : ZoneInfoUiEvent()
+
+
+    data class AddMovementToSaveList(val movementList: List<ArticleMovement>) : ZoneInfoUiEvent()
+
+    data class AddArticleToSave(val article: Article) : ZoneInfoUiEvent()
+
+    data class SelectArticle(val articleId: String) : ZoneInfoUiEvent()
+
+    data class DeselectArticle(val idDeselect: String) : ZoneInfoUiEvent()
+
+    data class RemoveMember(val memberId: String) : ZoneInfoUiEvent()
+
+    data class SetMoveCount (val newCount : Int) : ZoneInfoUiEvent()
+
+    data class SetMoveArticle (val articleToMove : Article) : ZoneInfoUiEvent()
+    data object MoveSelectedArticle : ZoneInfoUiEvent()
+
+    data class ToggleSelectionDeleteArticleMode(val state: Boolean) : ZoneInfoUiEvent()
+
 
     data object ClearArticleDeleteSelections : ZoneInfoUiEvent()
 
-    data object ClearArticlesAndMovementsToSave :ZoneInfoUiEvent()
+    data object RemoveArticlesToSave : ZoneInfoUiEvent()
 
-    data object NavigateBackShowDialog  : ZoneInfoUiEvent()
+
+    data object NavigateBackShowDialog : ZoneInfoUiEvent()
 
     data object ShowDeleteArticleDialog : ZoneInfoUiEvent()
     data object DismissDeleteArticleDialog : ZoneInfoUiEvent()
-
-
-
-
-
 
 
 }

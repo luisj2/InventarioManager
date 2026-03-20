@@ -61,9 +61,10 @@ fun ZonePrincipalScreen(
     val context = LocalContext.current
 
 
-
-    LaunchedEffect(Unit) {
-        viewModel.onEvent(ZonePrincipalUiEvent.UpdateUserZoneList)
+    LaunchedEffect(uiState.userId) {
+        if(uiState.userId != null){
+            viewModel.onEvent(ZonePrincipalUiEvent.UpdateUserZoneList)
+        }
     }
 
     LaunchedEffect(Unit) {

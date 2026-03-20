@@ -30,11 +30,12 @@ sealed class Screen {
 
 
     @Serializable
-    data class ArticleListSelector (val storageType : String,val zoneId : String) : Screen()
+    data class ArticleListSelector (val storageType : String,val zoneId : String?,val screenId : String) : Screen()
 
     @Serializable
     data class ZoneSelector(
         val zoneIdFromMove: String,
+        val zoneFromMoveStorageType : String,
         val zoneSelectedStorageType : String,
         val articleIdToMove: String,
         val articleCountToMove: Int

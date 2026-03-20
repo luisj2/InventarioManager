@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArticleZoneDao {
@@ -14,7 +15,7 @@ interface ArticleZoneDao {
     suspend fun insertArticle(newArticle: ArticleZoneEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertArticles(articlesList: List<ArticleZoneEntity>)
+    suspend fun insertArticles(articlesList: List<ArticleZoneEntity>) : List<Long>
 
     //GET
     @Query("""
@@ -24,11 +25,21 @@ interface ArticleZoneDao {
         )
     suspend fun getArticleFromZone (articleId : Long,zoneId : Long) : ArticleZoneEntity?
 
+
     @Query("""
         SELECT * FROM ARTICLE
         WHERE zoneId = :zoneId
         """)
     suspend fun getArticleListByZoneId (zoneId : Long) : List<ArticleZoneEntity>
+
+    @Query(
+        """
+        SELECT * FROM ARTICLE
+        WHERE zoneId = :zoneId
+        """
+    )
+    fun getArticleListByZoneIdFlow(zoneId: Long): Flow<List<ArticleZoneEntity>>
+
 
     //UPDATE
     @Query("""
@@ -60,6 +71,20 @@ interface ArticleZoneDao {
         WHERE id IN (:articleIdList) AND zoneId = :zoneId
     """)
     suspend fun deleteArticleByIdList (zoneId : Long,articleIdList : List<Long>) : Int
+
+    @Query("""
+    UPDATE article 
+    SET count = :newCount 
+    WHERE id = :articleId 
+    AND zoneId = :zoneId
+""")
+    suspend fun updateArticleCount(
+        articleId: Long,
+        zoneId: Long,
+        newCount: Int
+    ): Int
+
+
 
 
 }

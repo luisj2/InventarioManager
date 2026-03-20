@@ -29,8 +29,8 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit){
-        viewModel.onEvent(SettingsUiEvent.InitSession)
+    LaunchedEffect(uiState.userId){
+        if(uiState.userId != null) viewModel.onEvent(SettingsUiEvent.InitSession)
     }
 
     LaunchedEffect(Unit) {
@@ -42,6 +42,17 @@ fun SettingsScreen(
             }
         }
     }
+
+    LogoutConfirmationDialog(
+        show = uiState.showConfirmLogoutDialog,
+        onConfirmLogout = {
+            viewModel.onEvent(SettingsUiEvent.OnLogoutClicked)
+            viewModel.onEvent(SettingsUiEvent.DissmissLogoutDialog)
+        },
+        onDismiss = {
+            viewModel.onEvent(SettingsUiEvent.DissmissLogoutDialog)
+        }
+    )
 
     if(uiState.isLoading){
         LoadingIndicator()
@@ -77,7 +88,7 @@ private fun SettingsContent(
             LogInContent(
                 username = state.username ?: "???",
                 onLogOut = {
-                    onEvent(SettingsUiEvent.OnLogoutClicked)
+                    onEvent(SettingsUiEvent.ShowConfirmLogoutDialog)
                 }
             )
         } else {

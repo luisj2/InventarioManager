@@ -1,10 +1,10 @@
 package com.xluis.inventarioefa._domain.UseCases.Firebase.Auth
 
 import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
+import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa._domain.util.toValidationResult
 import com.xluis.inventarioefa.data.Database.Datastore.UserDataStore
 import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthLoginRepository
-import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 
 class LoginUserUseCase(
     private val authLoginRepository: AuthLoginRepository
@@ -13,12 +13,8 @@ class LoginUserUseCase(
         email: String,
         password: String
     ): ValidationResult {
-        val result = authLoginRepository.logIn(email, password)
-
-        if (result is SuspendResult.Success) {
-            UserDataStore.saveUserUid(result.data)
-        }
-
-        return result.toValidationResult("No se ha podido completar el login")
+        return authLoginRepository.logIn(email, password)
+            .onSuccess { UserDataStore.saveUserUid(it) }
+            .toValidationResult("No se ha podido completar el login")
     }
 }

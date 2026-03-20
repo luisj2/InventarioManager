@@ -7,10 +7,6 @@ import kotlinx.coroutines.withContext
 
 abstract class BaseRoomRepository {
 
-    /**
-     * Ejecuta cualquier operación de Room de forma segura.
-     * Aplica try/catch centralizado y retorna SuspendResult<T>
-     */
     protected suspend fun <T> executeRoomOperation(block: suspend () -> T): SuspendResult<T> {
         return withContext(Dispatchers.IO) {
             try {

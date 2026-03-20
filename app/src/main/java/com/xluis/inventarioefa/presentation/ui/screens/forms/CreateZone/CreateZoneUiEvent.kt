@@ -1,6 +1,7 @@
 package com.xluis.inventarioefa.presentation.ui.screens.forms.CreateZone
 
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa.data.Model.Room.ArticleEntity
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 
@@ -13,7 +14,9 @@ sealed class CreateZoneUiEvent {
     data class IconChanged(val icon: ImageVector) : CreateZoneUiEvent()
     data class ZoneNameChanged(val zoneName: String) : CreateZoneUiEvent()
     data class ZoneParentIdChanged(val parentId: String) : CreateZoneUiEvent()
-    data object CreateZoneClicked : CreateZoneUiEvent()
+    data class CreateZoneClicked (val articleSelectedList : List<Article>) : CreateZoneUiEvent()
+
+    data class DeleteArticleInList (val articleId : String) : CreateZoneUiEvent()
 
     data class AddArticle(val articleEntity : ArticleEntity) : CreateZoneUiEvent()
 

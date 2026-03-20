@@ -2,7 +2,7 @@ package com.xluis.inventarioefa.data.Mapper.Article
 
 import ArticleCategory
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
-import com.xluis.inventarioefa.data.Model.Article.ArticleFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Article.ArticleFirestore
 import java.util.UUID
 
 // ============================================================

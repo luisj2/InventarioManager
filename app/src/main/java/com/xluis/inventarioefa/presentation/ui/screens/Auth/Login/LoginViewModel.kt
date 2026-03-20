@@ -24,6 +24,9 @@ class LoginViewModel(
     private val _uiEffect = Channel<LoginUiEffect> {}
     val uiEffect = _uiEffect.receiveAsFlow()
 
+    private fun updateState(update: LoginUiState.() -> LoginUiState) {
+        _uiState.value = _uiState.value.update()
+    }
 
     fun onEvent(event: LoginUiEvent) {
         when (event) {
@@ -96,6 +99,16 @@ class LoginViewModel(
             passwordError = (result as? ValidationResult.Error)?.message
         )
     }
+
+    fun setCredentials(email: String, password: String) {
+        updateState {
+            copy(
+                email = email,
+                password = password
+            )
+        }
+    }
+
 
     private fun turnLoadingTo(loadingState: Boolean) {
         _uiState.value = _uiState.value.copy(isLoading = loadingState)

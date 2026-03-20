@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa.presentation.ui.screens.Selectors.ZoneSelector
+ package com.xluis.inventarioefa.presentation.ui.screens.Selectors.ZoneSelector
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,6 +37,7 @@ import com.xluis.inventarioefa.utils.toast
 fun ZoneSelectorScreen(
     viewModel: ZoneSelectorViewModel = viewModel(),
     zoneIdFromMove: String,
+    zoneFromMoveStorageType : String,
     zoneToMoveStorageType: String,
     articleIdToMove: String,
     articleCountToMove: Int,
@@ -50,6 +51,7 @@ fun ZoneSelectorScreen(
             ZoneSelectorUiEvent.Initialize(
                 zoneIdFromMove = zoneIdFromMove,
                 zoneToMoveStorageType = StorageType.fromName(zoneToMoveStorageType),
+                storageTypeFromMove = StorageType.fromName(zoneFromMoveStorageType),
                 articleIdToMove = articleIdToMove,
                 articleCountToMove = articleCountToMove
             )
@@ -60,9 +62,20 @@ fun ZoneSelectorScreen(
         viewModel.onEvent(ZoneSelectorUiEvent.GetArticleById(zoneIdFromMove, articleIdToMove))
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.onEvent(ZoneSelectorUiEvent.GetZoneListByUserId)
+    LaunchedEffect(
+        uiState.userId,
+        uiState.zoneIdFromMove,
+        uiState.storageTypeFromMove
+    ) {
+        val userId = uiState.userId
+        val zoneId = uiState.zoneIdFromMove
+        val storageType = uiState.storageTypeFromMove
+
+        if (userId != null && zoneId != null && storageType != null) {
+            viewModel.onEvent(ZoneSelectorUiEvent.GetZoneListByUserId)
+        }
     }
+
 
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
@@ -124,8 +137,7 @@ private fun ZoneSelectorContent(
                     onClick = {
                         if (uiState.zoneIdSelected == null) onEvent(ZoneSelectorUiEvent.ShowToast("Selecciona alguna zona"))
                         else {
-                            onEvent(ZoneSelectorUiEvent.SaveMoveArticleMovement)
-                            onEvent(ZoneSelectorUiEvent.NavigateBack)
+                            onEvent(ZoneSelectorUiEvent.SaveMoveArticleMove)
                         }
                     }
                 )

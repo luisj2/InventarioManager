@@ -17,7 +17,8 @@ class ArticleZoneRoomRepository(private val dao: ArticleZoneDao) : BaseRoomRepos
             true
         }
     }
-        suspend fun upsertArticleCount(
+
+    suspend fun upsertArticleCount(
         zoneId: Long,
         article: ArticleZoneEntity
     ): SuspendResult<Boolean> {
@@ -73,7 +74,7 @@ class ArticleZoneRoomRepository(private val dao: ArticleZoneDao) : BaseRoomRepos
             val newCount = article.count - countToRemove
 
             if (shouldDeleteArticle(newCount)) {
-                dao.deleteArticle(articleId,zoneId) > 0
+                dao.deleteArticle(articleId, zoneId) > 0
             } else {
                 dao.substractArticleCount(zoneId, articleId, countToRemove) > 0
             }
@@ -100,20 +101,34 @@ class ArticleZoneRoomRepository(private val dao: ArticleZoneDao) : BaseRoomRepos
 
 
     private fun shouldDeleteArticle(newCount: Int): Boolean {
-    return newCount <= 0
-}
-    suspend fun deleteArticleByIdList(
-        zoneId  :Long,
-        idList : List<Long>
-    ) : SuspendResult<Boolean>{
+        return newCount <= 0
+    }
+
+    suspend fun removeArticleByIdList(
+        zoneId: Long,
+        idList: List<Long>
+    ): SuspendResult<Boolean> {
         return executeRoomOperation {
-            dao.deleteArticleByIdList(zoneId,idList) > 0
+            dao.deleteArticleByIdList(zoneId, idList) > 0
         }
     }
 
-suspend fun getArticleFromZone(articleId: Long, zoneId: Long): SuspendResult<ArticleZoneEntity?> {
-    return executeRoomOperation {
-        dao.getArticleFromZone(articleId, zoneId)
+    suspend fun getArticleFromZone(
+        articleId: Long,
+        zoneId: Long
+    ): SuspendResult<ArticleZoneEntity?> {
+        return executeRoomOperation {
+            dao.getArticleFromZone(articleId, zoneId)
+        }
     }
-}
+
+    suspend fun updateArticleCount(
+        zoneId: Long,
+        articleId: Long,
+        newCount: Int
+    ) : SuspendResult<Int> {
+        return executeRoomOperation {
+            dao.updateArticleCount(zoneId,articleId,newCount)
+        }
+    }
 }

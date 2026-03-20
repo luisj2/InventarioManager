@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo
+package com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,15 +23,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
 import com.xluis.inventarioefa._domain.model.DataClass.User.User
+import com.xluis.inventarioefa._domain.util.onError
+import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa.utils.ValidatedTextField
 
 @Composable
 fun AddMemberDialog(
+    show : Boolean,
     onDismiss: () -> Unit,
     onSend: (String) -> Unit
 ) {
+
+    if(!show) return
+
     var email by remember { mutableStateOf("") }
     var emailError by remember { mutableStateOf<String?>(null) }
 
@@ -87,14 +92,12 @@ fun AddMemberDialog(
                     Button(
                         onClick = {
                             // Validar usando tu lógica de User
-                            val validation = User(email = email).validateEmail()
-
-                            if (validation is ValidationResult.Error) {
-                                emailError = validation.message
-                                return@Button
-                            }
-
-                            onSend(email)
+                            User(email = email).validateEmail()
+                                .onSuccess{ onSend(email) }
+                                .onError {
+                                    emailError = it.message
+                                    return@Button
+                                }
                         }
                     ) {
                         Text("Enviar")

@@ -54,7 +54,6 @@ android {
 
     packaging {
         resources {
-            // Excluye licencias duplicadas
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }

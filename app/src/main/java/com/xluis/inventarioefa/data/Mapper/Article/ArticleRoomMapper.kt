@@ -3,6 +3,7 @@ package com.xluis.inventarioefa.data.Mapper.Article
 import ArticleCategory
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa.data.Model.Room.ArticleEntity
+import com.xluis.inventarioefa.data.Model.Room.ArticleSelectedEntity
 
 fun ArticleEntity.toDomain(): Article {
     val categoryEnum = try {
@@ -25,6 +26,33 @@ fun Article.toEntity(): ArticleEntity {
         id = this.id.toLongOrNull() ?: 0,
         name = this.name,
         category = this.category.displayName
+    )
+}
+
+// Room → Domain
+fun ArticleSelectedEntity.toDomain(): Article {
+    return Article(
+        id = this.articleId,
+        name = this.name,
+        category = try {
+            ArticleCategory.valueOf(this.category)
+        } catch (e: IllegalArgumentException) {
+            ArticleCategory.OTHER
+        },
+        zoneId = this.zoneId.toString(),
+        count = this.count
+    )
+}
+
+// Domain → Room
+fun Article.toSelectedEntity(screenId: String): ArticleSelectedEntity {
+    return ArticleSelectedEntity(
+        screenId = screenId,
+        articleId = this.id,
+        name = this.name,
+        category = this.category.name,
+        zoneId = this.zoneId ?: "",
+        count = this.count
     )
 }
 

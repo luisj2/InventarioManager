@@ -7,7 +7,7 @@ import com.xluis.inventarioefa._domain.model.Enums.SortType
 sealed class ArticleListSelectorUiEvent {
     data object GetAllArticles : ArticleListSelectorUiEvent()
 
-    data class InitValues (val storageType : String,val zoneId:String) : ArticleListSelectorUiEvent()
+    data class InitValues (val storageType : String,val zoneId:String, val screenId : String) : ArticleListSelectorUiEvent()
 
     data class ToggleCreateArticleDialog (val state : Boolean) : ArticleListSelectorUiEvent()
 

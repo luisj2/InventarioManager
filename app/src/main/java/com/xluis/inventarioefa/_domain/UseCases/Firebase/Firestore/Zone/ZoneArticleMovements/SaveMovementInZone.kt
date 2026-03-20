@@ -3,7 +3,7 @@ package com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArt
 import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
 import com.xluis.inventarioefa._domain.util.toValidationResult
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleMovementRepository
-import com.xluis.inventarioefa.data.Model.Movement.ArticleMovementFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.Movement.ArticleMovementFirestore
 
 class SaveMovementInZone(
     private val movementRepository: ArticleMovementRepository

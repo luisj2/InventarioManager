@@ -12,6 +12,7 @@ fun articleToArticleMovement(
     article: Article,
     userId: String,
     action: MovementAction,
+    userName : String,
     zoneId: String? = null,
     zoneName: String? = null,
     date: LocalDateTime = LocalDateTime.now()
@@ -21,6 +22,7 @@ fun articleToArticleMovement(
         articleId = article.id ?: "",
         userId = userId,
         actionType = action,
+        userName = userName,
         count = article.count,
         articleName = article.name,
         zoneId = zoneId ?: "",
