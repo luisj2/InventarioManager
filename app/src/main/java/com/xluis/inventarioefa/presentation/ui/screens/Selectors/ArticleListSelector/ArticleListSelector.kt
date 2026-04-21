@@ -36,7 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.xluis.inventarioefa._domain.model.Articles.ArticleDescriptionGroup
 import com.xluis.inventarioefa._domain.model.Enums.SortType
+import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.AddArticleDialog
+import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.DescriptionsDialog
 import com.xluis.inventarioefa.utils.ArticleItem
 import com.xluis.inventarioefa.utils.DefaultButton
 import com.xluis.inventarioefa.utils.DefaultDropDownSelector
@@ -47,9 +50,9 @@ import com.xluis.inventarioefa.utils.toast
 @Composable
 fun ArticleListSelector(
     viewModel: ArticleListSelectorViewModel,
-    storageType : String,
-    zoneId : String,
-    screenId : String,
+    storageType: String,
+    zoneId: String,
+    screenId: String,
     navigateBack: () -> Unit
 ) {
 
@@ -57,11 +60,11 @@ fun ArticleListSelector(
     val uiState by viewModel.uiState
 
     LaunchedEffect(Unit) {
-        viewModel.onEvent(ArticleListSelectorUiEvent.InitValues(storageType,zoneId,screenId))
+        viewModel.onEvent(ArticleListSelectorUiEvent.InitValues(storageType, zoneId, screenId))
         viewModel.onEvent(ArticleListSelectorUiEvent.GetAllArticles)
     }
 
-    LaunchedEffect(Unit){
+    LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
                 ArticleListSelectorUiEffect.NavigateBack -> navigateBack()
@@ -71,7 +74,12 @@ fun ArticleListSelector(
 
     }
 
-    if(uiState.isLoading){
+    Dialogs(
+        uiState = uiState,
+        onEvent = { event -> viewModel.onEvent(event) }
+    )
+
+    if (uiState.isLoading) {
         LoadingIndicator()
     }
 
@@ -101,7 +109,7 @@ private fun ArticleSelectorContent(
                 }
             )
         }
-    ) {paddingValues ->
+    ) { paddingValues ->
 
         Column(
             modifier = Modifier
@@ -132,8 +140,8 @@ private fun ArticleSelectorContent(
                 DefaultButton(
                     contentText = "+ Añadir ${selectedArticles.size}",
                     onClick = {
-                        if (articleList.isNotEmpty()) {
-                            onEvent(ArticleListSelectorUiEvent.SaveSelectedArticles)
+                        if (selectedArticles.isNotEmpty()) {
+                            onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(true))
                         } else {
                             showToast("Añade un artículo")
                         }
@@ -144,9 +152,15 @@ private fun ArticleSelectorContent(
             ArticleFilterBar(
                 state = uiState,
                 onSearch = { query -> onEvent(ArticleListSelectorUiEvent.OnSearchQueryChanged(query)) },
-                onCategorySelected = { category -> onEvent(ArticleListSelectorUiEvent.OnCategoryChanged(category)) },
+                onCategorySelected = { category ->
+                    onEvent(
+                        ArticleListSelectorUiEvent.OnCategoryChanged(
+                            category
+                        )
+                    )
+                },
                 onSortSelected = { sort -> onEvent(ArticleListSelectorUiEvent.OnAddSortType(sort)) },
-                onSortRemoved = {sort -> onEvent(ArticleListSelectorUiEvent.OnRemoveSortType(sort))}
+                onSortRemoved = { sort -> onEvent(ArticleListSelectorUiEvent.OnRemoveSortType(sort)) }
             )
 
             // Lista de artículos
@@ -160,7 +174,12 @@ private fun ArticleSelectorContent(
                         isArticleSelected = isArticleSelected,
                         onSelectArticle = { count ->
                             if (!isArticleSelected) {
-                                onEvent(ArticleListSelectorUiEvent.SelectArticleList(article, count))
+                                onEvent(
+                                    ArticleListSelectorUiEvent.SelectArticleList(
+                                        article,
+                                        count
+                                    )
+                                )
                             } else {
                                 onEvent(ArticleListSelectorUiEvent.DeselectArticleByIdList(article.id))
                             }
@@ -171,13 +190,42 @@ private fun ArticleSelectorContent(
 
 
             // Diálogo para crear un artículo
-            AddArticleDialog(
-                showDialog = uiState.createArticleDialogState,
-                onDismiss = { onEvent(ArticleListSelectorUiEvent.ToggleCreateArticleDialog(false)) },
-                onAddArticle = { article -> onEvent(ArticleListSelectorUiEvent.AddArticle(article)) }
-            )
+
         }
     }
+
+}
+
+@Composable
+private fun Dialogs(
+    uiState: ArticleListSelectorUiState,
+    onEvent: (ArticleListSelectorUiEvent) -> Unit
+) {
+    AddArticleDialog(
+        showDialog = uiState.createArticleDialogState,
+        onDismiss = { onEvent(ArticleListSelectorUiEvent.ToggleCreateArticleDialog(false)) },
+        onAddArticle = { article -> onEvent(ArticleListSelectorUiEvent.AddArticle(article)) }
+    )
+    DescriptionsDialog(
+        showDialog = uiState.showDescriptionDialog,
+        groups = uiState.articleList.map { article ->
+            ArticleDescriptionGroup(
+                article = article,
+                descriptions = List(article.count) { "" }
+            )
+        },
+        onDismiss = { onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(false)) },
+        onDescriptionChange = { groupIndex, descIndex, value ->
+            onEvent(
+                ArticleListSelectorUiEvent.UpdateArticleDescription(
+                    groupIndex = groupIndex,
+                    descIndex = descIndex,
+                    description = value
+                )
+            )
+        },
+        onConfirm = { onEvent(ArticleListSelectorUiEvent.SaveSelectedArticles) }
+    )
 }
 
 @Composable
@@ -194,41 +242,80 @@ fun ArticleFilterBar(
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Detecta el ancho disponible
+        val screenWidth =
+            LocalContext.current.resources.displayMetrics.widthPixels / LocalContext.current.resources.displayMetrics.density
 
-        // FILTROS PRINCIPALES
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (screenWidth > 480) {
+            // Pantalla grande → fila horizontal
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = onSearch,
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Buscar") },
+                    singleLine = true
+                )
 
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = onSearch,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Buscar") },
-                singleLine = true
-            )
+                DefaultDropDownSelector(
+                    optionList = listOf("Todas") + ArticleCategory.entries.map { it.displayName },
+                    labelText = "Categoría",
+                    selectedOption = state.selectedCategory?.displayName ?: "Todas",
+                    onOptionSelected = { selected ->
+                        if (selected == "Todas") onCategorySelected(null)
+                        else {
+                            val category =
+                                ArticleCategory.entries.first { it.displayName == selected }
+                            onCategorySelected(category)
+                        }
+                    },
+                )
 
-            DefaultDropDownSelector(
-                optionList = listOf("Todas") + ArticleCategory.entries.map { it.displayName },
-                labelText = "Categoría",
-                selectedOption = state.selectedCategory?.displayName ?: "Todas",
-                onOptionSelected = { selected ->
-                    if (selected == "Todas") onCategorySelected(null)
-                    else {
-                        val category = ArticleCategory.entries.first { it.displayName == selected }
-                        onCategorySelected(category)
-                    }
-                },
-            )
+                SortButton(onSortSelected = onSortSelected)
+            }
+        } else {
+            // Pantalla pequeña → columna vertical
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedTextField(
+                    value = state.searchQuery,
+                    onValueChange = onSearch,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Buscar") },
+                    singleLine = true
+                )
 
-            SortButton(
-                onSortSelected = onSortSelected
-            )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DefaultDropDownSelector(
+                        optionList = listOf("Todas") + ArticleCategory.entries.map { it.displayName },
+                        labelText = "Categoría",
+                        selectedOption = state.selectedCategory?.displayName ?: "Todas",
+                        onOptionSelected = { selected ->
+                            if (selected == "Todas") onCategorySelected(null)
+                            else {
+                                val category =
+                                    ArticleCategory.entries.first { it.displayName == selected }
+                                onCategorySelected(category)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    SortButton(onSortSelected = onSortSelected)
+                }
+            }
         }
 
-
+        // Filtros activos
         if (state.sortList.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -274,6 +361,7 @@ fun SortButton(
         }
     }
 }
+
 @Composable
 fun SortChip(sort: SortType, onRemove: () -> Unit) {
     Row(

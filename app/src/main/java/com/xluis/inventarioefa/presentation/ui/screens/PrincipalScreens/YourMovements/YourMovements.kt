@@ -18,6 +18,7 @@ import com.xluis.inventarioefa._domain.model.Enums.DateMode
 import com.xluis.inventarioefa.domain.model.DataClass.Enums.MovementAction
 import com.xluis.inventarioefa.utils.DefaultButton
 import com.xluis.inventarioefa.utils.DefaultDropDownSelector
+import com.xluis.inventarioefa.utils.LoadingIndicator
 import com.xluis.inventarioefa.utils.MovementsList
 
 
@@ -33,6 +34,10 @@ fun YourMovementsScreen(
 
     LaunchedEffect(Unit) {
         viewModel.onEvent(YourMovementsUiEvents.UpdateMovementListByUserId)
+    }
+
+    if(uiState.isLoading){
+        LoadingIndicator()
     }
 
     YourMovementContent(

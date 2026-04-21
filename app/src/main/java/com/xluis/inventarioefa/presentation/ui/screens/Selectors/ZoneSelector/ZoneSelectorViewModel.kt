@@ -6,8 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserLoggedUsername
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetAllZoneListByUserId
-import com.xluis.inventarioefa._domain.UseCases.GetZoneArticleById
-import com.xluis.inventarioefa._domain.UseCases.MoveArticleToZone
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneArticleById
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.MoveArticleToZone
 import com.xluis.inventarioefa._domain.util.getOrNull
 import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess

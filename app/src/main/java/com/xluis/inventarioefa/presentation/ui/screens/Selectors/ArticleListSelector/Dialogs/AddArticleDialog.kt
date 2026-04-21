@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector
+package com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs
 
 import ArticleCategory
 import androidx.compose.foundation.layout.Column

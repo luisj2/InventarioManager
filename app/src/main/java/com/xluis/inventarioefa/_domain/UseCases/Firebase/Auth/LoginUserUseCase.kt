@@ -4,10 +4,10 @@ import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
 import com.xluis.inventarioefa._domain.util.onSuccess
 import com.xluis.inventarioefa._domain.util.toValidationResult
 import com.xluis.inventarioefa.data.Database.Datastore.UserDataStore
-import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthLoginRepository
+import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthRepository
 
 class LoginUserUseCase(
-    private val authLoginRepository: AuthLoginRepository
+    private val authLoginRepository: AuthRepository
 ) {
     suspend operator fun invoke(
         email: String,

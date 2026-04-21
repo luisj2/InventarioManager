@@ -47,17 +47,22 @@ class ZoneRoomRepository(
         }
     }
 
-    suspend fun getZoneById (zoneId : Long) : SuspendResult<ZoneEntity?>{
+    suspend fun getZoneById(zoneId: Long): SuspendResult<ZoneEntity?> {
         return executeRoomOperation {
             zoneDao.getZoneById(zoneId)
         }
     }
 
-    suspend fun getAllZonesFull(userId : String): SuspendResult<List<ZoneWithArticlesAndMovements?>> {
+    suspend fun getAllZonesFull(userId: String): SuspendResult<List<ZoneWithArticlesAndMovements?>> {
         return executeRoomOperation {
             zoneDao.getAllZoneFull(userId)
         }
     }
+
+    fun getAllZoneFullFlow(userId: String): Flow<List<ZoneWithArticlesAndMovements>> {
+        return zoneDao.getAllZoneFullFlow(userId)
+    }
+
 
     suspend fun getMovementListByZoneId(zoneId: Long): SuspendResult<List<ArticleMovementsEntity>> {
         return executeRoomOperation {
@@ -75,6 +80,15 @@ class ZoneRoomRepository(
     suspend fun updateZone(zone: ZoneEntity): SuspendResult<Boolean> {
         return executeRoomOperation {
             zoneDao.updateZone(zone) > 0
+        }
+    }
+
+    suspend fun changeZoneName(
+        zoneId: Long,
+        newZoneName: String
+    ): SuspendResult<Boolean> {
+        return executeRoomOperation {
+            zoneDao.changeZoneName(zoneId, newZoneName) > 0
         }
     }
 
@@ -145,6 +159,10 @@ class ZoneRoomRepository(
         }
     }
 
+    fun getAllMovementsByUserZonesFlow (userId : String) : Flow<List<ArticleMovementsEntity>>{
+        return zoneDao.getAllMovementsByUserZonesFlow(userId)
+    }
+
     suspend fun getAllMovementsByUserZones(): SuspendResult<List<ArticleMovementsEntity>> {
         return executeRoomOperation {
             val zoneIdList = zoneDao.getAllZoneId()
@@ -169,32 +187,33 @@ class ZoneRoomRepository(
         return articleZoneDao.getArticleListByZoneIdFlow(zoneId)
     }
 
-    fun getMovementsListByZoneIdFlow(zoneId : Long) : Flow<List<ArticleMovementsEntity>>{
+    fun getMovementsListByZoneIdFlow(zoneId: Long): Flow<List<ArticleMovementsEntity>> {
         return movementDao.getMovementsListByZoneIdFlow(zoneId)
     }
-    suspend fun getZoneNameById (zoneId : Long) : SuspendResult<String>{
+
+    suspend fun getZoneNameById(zoneId: Long): SuspendResult<String> {
         return executeRoomOperation {
             zoneDao.getZoneNameById(zoneId) ?: ""
         }
     }
 
     suspend fun upsertArticlesAndMovements(
-        zoneId : Long,
+        zoneId: Long,
         articles: List<ArticleZoneEntity>,
         movements: List<ArticleMovementsEntity>
-    ) : SuspendResult<Boolean>{
+    ): SuspendResult<Boolean> {
         return executeRoomOperation {
-            zoneDao.upsertArticlesAndMovements(zoneId,articles,movements)
+            zoneDao.upsertArticlesAndMovements(zoneId, articles, movements)
             true
         }
     }
 
     suspend fun insertOrUpdateArticleCount(
-        zoneId : Long,
-        articleToUpdate : ArticleZoneEntity,
-    ) : SuspendResult<Boolean>{
+        zoneId: Long,
+        articleToUpdate: ArticleZoneEntity,
+    ): SuspendResult<Boolean> {
         return executeRoomOperation {
-            zoneDao.insertOrUpdateArticleCount(zoneId,articleToUpdate)
+            zoneDao.insertOrUpdateArticleCount(zoneId, articleToUpdate)
             true
         }
 
@@ -202,28 +221,28 @@ class ZoneRoomRepository(
 
     suspend fun upsertArticleAndMovement(
         zoneId: Long,
-        article : ArticleZoneEntity,
-        movement : ArticleMovementsEntity
-    ) : SuspendResult<Boolean>{
-        return executeRoomOperation {
-            zoneDao.upsertArticleAndMovement(zoneId,article,movement)
-            true
-        }
-    }
-    suspend fun updateOrDeleteArticlesAndMovements(
-        zoneId : Long,
-        articleId: Long,
-        quantityToRemove: Int,
+        article: ArticleZoneEntity,
         movement: ArticleMovementsEntity
-    ) : SuspendResult<Boolean>{
+    ): SuspendResult<Boolean> {
         return executeRoomOperation {
-            zoneDao.updateOrDeleteArticlesAndMovements(
-               zoneId, articleId,quantityToRemove,movement
-            )
+            zoneDao.upsertArticleAndMovement(zoneId, article, movement)
             true
         }
     }
 
+    suspend fun updateOrDeleteArticlesAndMovements(
+        zoneId: Long,
+        articleId: Long,
+        quantityToRemove: Int,
+        movement: ArticleMovementsEntity
+    ): SuspendResult<Boolean> {
+        return executeRoomOperation {
+            zoneDao.updateOrDeleteArticlesAndMovements(
+                zoneId, articleId, quantityToRemove, movement
+            )
+            true
+        }
+    }
 
 
 }

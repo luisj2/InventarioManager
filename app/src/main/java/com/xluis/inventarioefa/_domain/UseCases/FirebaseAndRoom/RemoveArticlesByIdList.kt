@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa._domain.UseCases
+package com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom
 
 import com.xluis.inventarioefa.data.Database.Firestore.Zone.ArticleZoneFirestoreRepository
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult

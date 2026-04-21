@@ -1,0 +1,52 @@
+<html>
+<head>
+<title>ArticleCategory.kt</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bbbbbb;}
+.s1 { color: #d55fde; font-style: italic;}
+.s2 { color: #89ca78;}
+</style>
+</head>
+<body bgcolor="#282c34">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+ArticleCategory.kt</font>
+</center></td></tr></table>
+<pre>
+<span class="s0">import androidx.compose.material.icons.Icons</span>
+<span class="s0">import androidx.compose.material.icons.filled.Build</span>
+<span class="s0">import androidx.compose.material.icons.filled.Category</span>
+<span class="s0">import androidx.compose.material.icons.filled.Computer</span>
+<span class="s0">import androidx.compose.material.icons.filled.Description</span>
+<span class="s0">import androidx.compose.material.icons.filled.DirectionsCar</span>
+<span class="s0">import androidx.compose.material.icons.filled.Inventory2</span>
+<span class="s0">import androidx.compose.material.icons.filled.Label</span>
+<span class="s0">import androidx.compose.material.icons.filled.ShoppingCart</span>
+<span class="s0">import androidx.compose.ui.graphics.vector.ImageVector</span>
+
+<span class="s0">enum </span><span class="s1">class </span><span class="s0">ArticleCategory(</span>
+    <span class="s1">val </span><span class="s0">displayName: String,</span>
+    <span class="s1">val </span><span class="s0">icon: ImageVector</span>
+<span class="s0">) {</span>
+    <span class="s0">STORAGE(</span><span class="s2">&quot;Almacenamiento&quot;</span><span class="s0">, Icons.Default.Inventory2),</span>
+    <span class="s0">TECHNOLOGY(</span><span class="s2">&quot;Tecnología&quot;</span><span class="s0">, Icons.Default.Computer),</span>
+    <span class="s0">VEHICLE(</span><span class="s2">&quot;Vehículo&quot;</span><span class="s0">, Icons.Default.DirectionsCar),</span>
+    <span class="s0">LABEL(</span><span class="s2">&quot;Etiquetas y señalización&quot;</span><span class="s0">, Icons.Default.Label),</span>
+    <span class="s0">TOOLS(</span><span class="s2">&quot;Herramientas&quot;</span><span class="s0">, Icons.Default.Build),</span>
+    <span class="s0">DOCUMENTS(</span><span class="s2">&quot;Documentos&quot;</span><span class="s0">, Icons.Default.Description),</span>
+    <span class="s0">PRODUCT(</span><span class="s2">&quot;Producto&quot;</span><span class="s0">, Icons.Default.ShoppingCart),</span>
+    <span class="s0">OTHER(</span><span class="s2">&quot;Otros&quot;</span><span class="s0">, Icons.Default.Category);</span>
+
+    <span class="s0">companion </span><span class="s1">object </span><span class="s0">{</span>
+        <span class="s1">fun </span><span class="s0">fromDisplayName(name: String?): ArticleCategory {</span>
+            <span class="s1">if </span><span class="s0">(name == </span><span class="s1">null</span><span class="s0">) </span><span class="s1">return </span><span class="s0">OTHER</span>
+            <span class="s1">return </span><span class="s0">entries.find { it.displayName.equals(name, ignoreCase = </span><span class="s1">true</span><span class="s0">) } ?: OTHER</span>
+        <span class="s0">}</span>
+    <span class="s0">}</span>
+<span class="s0">}</span>
+
+</pre>
+</body>
+</html>

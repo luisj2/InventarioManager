@@ -2,6 +2,7 @@ package com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo
 
 import com.xluis.inventarioefa._domain.model.DataClass.ArticleMovement
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
+import com.xluis.inventarioefa._domain.model.Zone.ZoneMember
 
 sealed class ZoneInfoUiEvent {
 
@@ -47,6 +48,11 @@ sealed class ZoneInfoUiEvent {
     data object ShowQuantityDialog : ZoneInfoUiEvent()
     data object DissmissQuantityDialog : ZoneInfoUiEvent()
 
+    data object ShowZoneNameDialog : ZoneInfoUiEvent()
+    data object DismissZoneNameDialog : ZoneInfoUiEvent()
+
+    data class ChangeZoneName (val newZoneName : String) : ZoneInfoUiEvent()
+
     data class AddRemoveQuantity (val isAdd : Boolean, val quantity : Int) : ZoneInfoUiEvent()
     data class UpdateArticlesToSaveList(val articleToSaveList: List<Article>) : ZoneInfoUiEvent()
     data class UpdateMovementsToSaveList(val movementsToSaveList: List<ArticleMovement>) :
@@ -79,7 +85,10 @@ sealed class ZoneInfoUiEvent {
 
     data class DeselectArticle(val idDeselect: String) : ZoneInfoUiEvent()
 
-    data class RemoveMember(val memberId: String) : ZoneInfoUiEvent()
+    data object RemoveMember : ZoneInfoUiEvent()
+
+    data class ShowRemoveMemberDialog (val memberSelected : ZoneMember) : ZoneInfoUiEvent()
+    data object DissmissRemoveMemberDialog : ZoneInfoUiEvent()
 
     data class SetMoveCount (val newCount : Int) : ZoneInfoUiEvent()
 

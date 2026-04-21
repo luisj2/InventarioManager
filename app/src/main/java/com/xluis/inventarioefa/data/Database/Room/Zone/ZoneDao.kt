@@ -11,6 +11,7 @@ import com.xluis.inventarioefa.data.Model.Room.Relactions.ZoneWithArticlesAndMov
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleMovementsEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ZoneEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ZoneDao {
@@ -60,6 +61,13 @@ interface ZoneDao {
 
     @Query("SELECT name FROM Zone WHERE id = :zoneId")
     suspend fun getZoneNameById(zoneId: Long): String?
+    @Query("""
+        SELECT am.* 
+        FROM article_movements AS am
+        INNER JOIN Zone AS z ON am.zoneId = z.id
+        WHERE z.userId = :userId
+    """)
+    fun getAllMovementsByUserZonesFlow(userId: String): Flow<List<ArticleMovementsEntity>>
 
     @Transaction
     @Query("SELECT * FROM Zone WHERE id = :zoneId")
@@ -68,6 +76,10 @@ interface ZoneDao {
     @Transaction
     @Query("SELECT * FROM Zone WHERE userId = :userId")
     suspend fun getAllZoneFull(userId : String): List<ZoneWithArticlesAndMovements>
+
+    @Transaction
+    @Query("SELECT * FROM Zone WHERE userId = :userId")
+    fun getAllZoneFullFlow(userId: String): Flow<List<ZoneWithArticlesAndMovements>>
 
 
     // ----------------- UPDATE -----------------
@@ -99,9 +111,18 @@ WHERE zoneId = :zoneId AND id = :articleId
         newCount: Int
     ): Int
 
+    @Query("""
+    UPDATE Zone
+    SET name = :newZoneName
+    WHERE id = :zoneId
+""")
+    suspend fun changeZoneName (zoneId : Long,newZoneName : String) : Int
+
 
     @Update
     suspend fun updateZones(zones: List<ZoneEntity>): Int
+
+
 
 
     // ----------------- DELETE -----------------

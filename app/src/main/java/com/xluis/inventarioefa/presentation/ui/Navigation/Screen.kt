@@ -30,7 +30,7 @@ sealed class Screen {
 
 
     @Serializable
-    data class ArticleListSelector (val storageType : String,val zoneId : String?,val screenId : String) : Screen()
+    data class ArticleListSelector (val storageType : String,val zoneId : String,val screenId : String) : Screen()
 
     @Serializable
     data class ZoneSelector(

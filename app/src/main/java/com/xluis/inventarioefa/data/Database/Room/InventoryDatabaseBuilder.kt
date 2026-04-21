@@ -2,6 +2,7 @@ package com.xluis.inventarioefa.data.Database.Room
 
 import android.content.Context
 import androidx.room.Room
+import com.xluis.inventarioefa.utils.DATABASE_NAME
 import com.xluis.inventarioefa.utils.getDefaultArticles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,7 @@ object InventoryDatabaseBuilder {
             val instance = Room.databaseBuilder(
                 context.applicationContext,
                 InventaryDatabase::class.java,
-                "Inventary_DB"
+                DATABASE_NAME
             )
                 .fallbackToDestructiveMigration()
                 .build()

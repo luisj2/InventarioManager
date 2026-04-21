@@ -45,7 +45,7 @@ import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 import com.xluis.inventarioefa.utils.LoadingIndicator
 import com.xluis.inventarioefa.utils.SearchAndFiltersBar
-import com.xluis.inventarioefa.utils.ZoneRefreshList
+import com.xluis.inventarioefa.utils.ZoneListSimple
 import com.xluis.inventarioefa.utils.toast
 
 
@@ -192,14 +192,10 @@ private fun ZonePrincipalContent(
                 onFilterRemoved = { onEvent(ZonePrincipalUiEvent.OnRemoveFilter(it)) }
             )
 
-            ZoneRefreshList(
+            ZoneListSimple(
                 zones = zonesToShow(uiState),
                 allZonesList = uiState.filteredZones,
-
                 selectedZones = uiState.selectionToRemoveZones.toList(),
-
-                isRefreshing = uiState.isRefreshing,
-                onRefresh = { onEvent(ZonePrincipalUiEvent.UpdateUserZoneList) },
 
                 onZoneClick = { zone ->
                     if (uiState.selectionMode) {
@@ -215,7 +211,6 @@ private fun ZonePrincipalContent(
                         }
                     }
                 },
-
                 onZoneLongClick = { zone ->
                     onEvent(ZonePrincipalUiEvent.ActivateSelectZoneToRemoveMode)
                     onEvent(ZonePrincipalUiEvent.ToggleZoneDeleteSelection(zone))
@@ -268,7 +263,8 @@ private fun ZoneTopBar(
                 IconButton(onClick = onToggleOption) {
                     Icon(
                         imageVector = Icons.Default.CheckBox,
-                        contentDescription = "Activar selección"
+                        contentDescription = "Activar selección",
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }

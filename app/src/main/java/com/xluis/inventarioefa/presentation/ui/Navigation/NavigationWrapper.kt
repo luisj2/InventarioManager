@@ -113,32 +113,10 @@ fun NavigationWrapper() {
         composable<Screen.CreateZone> { backStackEntry ->
             val args = backStackEntry.toRoute<Screen.CreateZone>()
             val storageType = StorageType.fromName(args.storageType)
-            val screen = Screen.CreateZone.toString()
             CreateZoneScreen(
                 viewModel = getVM<CreateZoneViewModel>(),
-                articleListToSave = selectedArticlesByScreen[screen] ?: emptyList(),
                 parentZoneId = args.parentZoneId,
                 storageType = storageType,
-                clearScreenArticles = {
-                    articleSelectionSharedViewModel.clearArticleListByScreenId(
-                        screen
-                    )
-                },
-                removeArticleId = { articleId ->
-                    articleSelectionSharedViewModel.removeArticleByScreenId(
-                        screen,
-                        articleId
-                    )
-                },
-                navigateArticleSelector = {
-                    navController.navigate(
-                        Screen.ArticleListSelector(
-                            storageType.toString(),
-                            null,
-                            screen
-                        )
-                    )
-                },
                 navigateBack = navigateBack
             )
         }

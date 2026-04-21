@@ -17,6 +17,7 @@ data class ArticleListSelectorUiState (
     val isLoading : Boolean = false,
     val searchQuery : String = "",
     val selectedCategory : ArticleCategory? = null,
-    val sortList : List<SortType> = emptyList()
+    val sortList : List<SortType> = emptyList(),
+    val showDescriptionDialog : Boolean = false
 
 )

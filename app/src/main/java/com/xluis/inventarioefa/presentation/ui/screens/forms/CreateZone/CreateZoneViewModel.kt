@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.GetUserLoggedEmail
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.CreateZoneFirestoreCase
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreZoneNameById
-import com.xluis.inventarioefa._domain.UseCases.GetUserZonesSummary
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetUserZonesSummary
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.CreateArticleCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.CreateZoneWithParentRoomCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.GetRoomZone
@@ -68,6 +68,10 @@ class CreateZoneViewModel(
             is CreateZoneUiEvent.ZoneNameChanged -> updateState { copy(zoneName = event.zoneName) }
             is CreateZoneUiEvent.ZoneParentIdChanged -> updateState { copy(parentZoneId = event.parentId) }
             is CreateZoneUiEvent.CreateZoneClicked -> {
+                if(_uiState.value.zoneName.isBlank()) {
+                    showToast("Rellena el nombre de la zona")
+                    return
+                }
                 val zone = Zone(
                     name = uiState.value.zoneName,
                     ownerId = _uiState.value.userId,
@@ -83,7 +87,6 @@ class CreateZoneViewModel(
                         .onSuccess {
                             showToast("Zona creada correctamente")
                             updateState { copy(isLoading = false) }
-                            clearScreenArticleList()
                             navigateBack()
                         }
                         .onError { error->
@@ -112,7 +115,6 @@ class CreateZoneViewModel(
                 updateParentList()
             }
 
-            CreateZoneUiEvent.NavigateToZoneSelector -> navigateToZoneSelector()
             is CreateZoneUiEvent.InitValues -> {
                 viewModelScope.launch {
                     updateState { copy(isLoading = true) }
@@ -131,91 +133,109 @@ class CreateZoneViewModel(
             }
 
             is CreateZoneUiEvent.ShowToast -> showToast(event.message)
-            is CreateZoneUiEvent.DeleteArticleInList -> removeArticleInList(event.articleId)
         }
     }
 
     private fun updateParentList() {
         viewModelScope.launch {
+            // Activar loading
             updateState { copy(isLoading = true) }
 
-            val userId = _uiState.value.userId ?: run{
-                showToast("No se ha encontrado el usuario")
-                return@launch
-            }
-            val zoneSummaryList: List<ZoneSummary> =
-                when (_uiState.value.storageType) {
+            try {
+                val userId = _uiState.value.userId ?: run {
+                    showToast("No se ha encontrado el usuario")
+                    return@launch
+                }
+
+                val zoneSummaryList: List<ZoneSummary> = when (_uiState.value.storageType) {
 
                     StorageType.LOCAL -> {
                         var list: List<ZoneSummary> = emptyList()
-
                         getRoomZoneList(userId)
                             .onSuccess { roomList ->
                                 list = roomList.map {
                                     ZoneSummary(it.id ?: "", it.name)
                                 }
                             }
-
-
+                            .onError { error ->
+                                showToast(error.message)
+                            }
                         list
                     }
 
                     StorageType.FIREBASE -> {
-                        val email = getUserLoggedEmail() ?: return@launch updateState { copy(parentList = emptyList()) }
+                        val email = getUserLoggedEmail() ?: run {
+                            showToast("No se ha encontrado el email del usuario")
+                            return@launch
+                        }
 
                         var list: List<ZoneSummary> = emptyList()
-
                         getUserZonesSummary(email)
                             .onSuccess { firebaseList ->
                                 list = firebaseList
                             }
-
-
+                            .onError { error ->
+                                showToast(error.message)
+                            }
                         list
                     }
                 }
 
-            updateState { copy(parentList = zoneSummaryList, isLoading = false) }
+                // Actualizar lista de padres
+                updateState { copy(parentList = zoneSummaryList) }
+
+            } finally {
+                // Desactivar loading siempre, aunque falle
+                updateState { copy(isLoading = false) }
+            }
         }
     }
-
 
 
     private suspend fun getParentNameByStorageType(
         storageType: StorageType,
         parentId: String?
     ): String {
-
         if (parentId == null) return "Sin nombre"
 
-        var name: String = "Sin nombre"
+        // Activar loading
+        changeLoadingTo(true)
 
+        try {
+            var name: String = "Sin nombre"
 
-        when (storageType) {
+            when (storageType) {
+                StorageType.LOCAL -> {
+                    getRoomZone(parentId)
+                        .onSuccess { zone ->
+                            name = zone?.name ?: "Sin nombre"
+                        }
+                        .onError { error ->
+                            name = "Error: ${error.message}"
+                            showToast(error.message)
+                        }
+                }
 
-            StorageType.LOCAL -> {
-                getRoomZone(parentId)
-                    .onSuccess { zone ->
-                        name = zone?.name ?: "Sin nombre"
-                    }
-                    .onError { error ->
-                        name = "Error: ${error.message}"
-                    }
+                StorageType.FIREBASE -> {
+                    getFirestoreZoneNameById(parentId)
+                        .onSuccess { zoneName ->
+                            name = zoneName
+                        }
+                        .onError { error ->
+                            name = "Error: ${error.message}"
+                            showToast(error.message)
+                        }
+                }
             }
 
-            StorageType.FIREBASE -> {
-                getFirestoreZoneNameById(parentId)
-                    .onSuccess { zoneName ->
-                        name = zoneName
-                    }
-                    .onError { error ->
-                        name = "Error: ${error.message}"
-                    }
-            }
+            return name
+        } finally {
+            // Desactivar loading siempre
+            changeLoadingTo(false)
         }
-
-        return name
     }
+
+
 
 
 
@@ -242,43 +262,54 @@ class CreateZoneViewModel(
         child: Zone,
         parentId: String?
     ): ValidationResult {
+        // Activar loading
+        changeLoadingTo(true)
 
-        val state = uiState.value
+        try {
+            val state = uiState.value
 
-        // --- VALIDACIONES ---
-        validateZone(child).let {
-            if (it is ValidationResult.Error) return it
-        }
-
-        val userId = state.userId
-
-        if (child.storageType == StorageType.FIREBASE && userId == null) {
-            return ValidationResult.Error("Comprueba que has iniciado sesión")
-        }
-
-        val parentIdLong = parentId?.toLongOrNull()
-
-        // --- CREACIÓN ---
-        return when (child.storageType) {
-
-            StorageType.LOCAL -> {
-                createZoneWithParentRoomCase(
-                    child = child,
-                    parentId = parentIdLong
-                )
+            // --- VALIDACIONES ---
+            validateZone(child).let {
+                if (it is ValidationResult.Error) return it
             }
 
-            StorageType.FIREBASE -> {
-                createZoneCase(
-                    zone = child.toFirestore().copy(ownerId = userId),
-                    articleList = child.articleList.map { it.toFirestore() },
-                    parentId = parentId,
-                    userId = userId!!
-                )
+            val userId = state.userId
+
+            if (child.storageType == StorageType.FIREBASE && userId == null) {
+                return ValidationResult.Error("Comprueba que has iniciado sesión")
             }
+
+            val parentIdLong = parentId?.toLongOrNull()
+
+            // --- CREACIÓN ---
+            return when (child.storageType) {
+                StorageType.LOCAL -> {
+                    createZoneWithParentRoomCase(
+                        child = child,
+                        parentId = parentIdLong
+                    )
+                }
+                StorageType.FIREBASE -> {
+                    createZoneCase(
+                        zone = child.toFirestore().copy(ownerId = userId),
+                        articleList = child.articleList.map { it.toFirestore() },
+                        parentId = parentId,
+                        userId = userId!!
+                    )
+                }
+            }
+        } finally {
+            // Desactivar loading aunque falle o tenga éxito
+            changeLoadingTo(false)
         }
     }
 
+    // Función para actualizar el state
+    private fun changeLoadingTo(loadingState: Boolean) {
+        viewModelScope.launch {
+            updateState { copy(isLoading = loadingState) }
+        }
+    }
 
     private fun validateZone(
         zone: Zone
@@ -294,23 +325,8 @@ class CreateZoneViewModel(
             _uiEffect.send(CreateZoneUiEffect.NavigateBack)
         }
     }
-    private fun clearScreenArticleList(){
-        viewModelScope.launch {
-            _uiEffect.send(CreateZoneUiEffect.ClearScreenArticleList)
-        }
-    }
 
-    private fun removeArticleInList (articleId : String){
-        viewModelScope.launch {
-            _uiEffect.send(CreateZoneUiEffect.DeleteArticleInList(articleId))
-        }
-    }
 
-    private fun navigateToZoneSelector() {
-        viewModelScope.launch {
-            _uiEffect.send(CreateZoneUiEffect.NavigateToZoneSelector)
-        }
-    }
 
     private fun showToast(message: String) {
         viewModelScope.launch {

@@ -10,6 +10,7 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.IsUserLoggedIn
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.LoginUserUseCase
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.Logout
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.RegisterAndSaveUserUseCase
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.SendPasswordResetEmail
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserIdByEmail
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserNameById
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.AcceptZoneRequest
@@ -32,18 +33,21 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArti
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.GetFirestoreArticleListByZoneId
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.RemoveFirestoreArticleList
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.SaveArticleListInZone
-import com.xluis.inventarioefa._domain.UseCases.GetAllUserMovements
-import com.xluis.inventarioefa._domain.UseCases.GetAllZoneList
-import com.xluis.inventarioefa._domain.UseCases.GetArticlesByZoneId
-import com.xluis.inventarioefa._domain.UseCases.GetMovementsByZoneId
-import com.xluis.inventarioefa._domain.UseCases.GetUserZonesSummary
-import com.xluis.inventarioefa._domain.UseCases.GetZoneArticleById
-import com.xluis.inventarioefa._domain.UseCases.GetZoneById
-import com.xluis.inventarioefa._domain.UseCases.GetZoneNameById
-import com.xluis.inventarioefa._domain.UseCases.InsertMovements
-import com.xluis.inventarioefa._domain.UseCases.MoveArticleToZone
-import com.xluis.inventarioefa._domain.UseCases.RemoveArticlesByIdList
-import com.xluis.inventarioefa._domain.UseCases.RemoveZoneListCase
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.ChangeZoneName
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetAllUserMovements
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetAllZoneList
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetArticlesByZoneId
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetMovementsByZoneId
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetUserZonesSummary
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneArticleById
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneById
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneNameById
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.InsertMovements
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.MoveArticleToZone
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveArticlesByIdList
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveZoneListCase
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.SaveDatabaseChanges
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.UpdateArticleCount
 import com.xluis.inventarioefa._domain.UseCases.Room.AddArtilesAndMovementSelected
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.CreateArticleCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.GetAllArticles
@@ -63,10 +67,7 @@ import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.GetAllMoveme
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.GetRoomZoneMovementById
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.Movements.InsertMovementsListRoom
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.SaveRoomChanges
-import com.xluis.inventarioefa._domain.UseCases.SaveDatabaseChanges
-import com.xluis.inventarioefa._domain.UseCases.UpdateArticleCount
-import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthLoginRepository
-import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthRegisterRepository
+import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthRepository
 import com.xluis.inventarioefa.data.Database.Firebase.Auth.AuthSessionRepository
 import com.xluis.inventarioefa.data.Database.Firebase.Firestore.User.UserZonesRequestsRepository
 import com.xluis.inventarioefa.data.Database.Firestore.User.UserFirestoreRepository
@@ -110,9 +111,8 @@ object AppDependencies {
     val db: InventaryDatabase by lazy { InventoryDatabaseBuilder.getDatabase(appContext) }
 
     // Repositorios
-    val authRegisterRepository by lazy { AuthRegisterRepository(auth) }
     val userFirestoreRepository by lazy { UserFirestoreRepository(fs) }
-    val loginRepository by lazy { AuthLoginRepository(auth) }
+    val authRepository by lazy{ AuthRepository(auth)}
     val userZonesRepository by lazy { UserZonesRepository(fs) }
     val zoneFirestoreRepository by lazy { ZoneFirestoreRepository(fs) }
     val articleZoneRepository by lazy { ArticleZoneFirestoreRepository(fs) }
@@ -137,9 +137,9 @@ object AppDependencies {
 
     // UseCases
     val registerAndSaveUserUseCase by lazy {
-        RegisterAndSaveUserUseCase(authRegisterRepository, userFirestoreRepository)
+        RegisterAndSaveUserUseCase(authRepository, userFirestoreRepository)
     }
-    val loginUseCase by lazy { LoginUserUseCase(loginRepository) }
+    val loginUseCase by lazy { LoginUserUseCase(authRepository) }
     val getUserZonesIds by lazy { GetUserZonesIds(userZonesRepository) }
     val getZoneListByIdList by lazy { GetZoneListByIdList(zoneFirestoreRepository) }
     val createZoneFirestoreCase by lazy {
@@ -376,6 +376,14 @@ object AppDependencies {
         GetAllZoneList(zoneRoomRepository, zoneFirestoreRepository)
     }
 
+    val sendPasswordResetEmail by lazy{
+        SendPasswordResetEmail(authRepository)
+    }
+
+    val changeZoneName by lazy{
+        ChangeZoneName(zoneFirestoreRepository, zoneRoomRepository)
+    }
+
     // Mapa de factories
     private val factories = mutableMapOf<KClass<out ViewModel>, ViewModelProvider.Factory>()
 
@@ -394,7 +402,12 @@ object AppDependencies {
     // Inicializar todas las factories de la app
     fun setupFactories() {
         registerViewModel(RegisterViewModel::class) { RegisterViewModel(registerAndSaveUserUseCase) }
-        registerViewModel(LoginViewModel::class) { LoginViewModel(loginUseCase) }
+        registerViewModel(LoginViewModel::class){
+            LoginViewModel(
+                loginUserUseCase = loginUseCase,
+                sendPasswordResetEmail = sendPasswordResetEmail
+            )
+        }
         registerViewModel(ZonePrincipalViewModel::class) {
             ZonePrincipalViewModel(
                 getAllZoneList = getAllZoneList,
@@ -437,7 +450,8 @@ object AppDependencies {
                 removeArticleSelectedListByIds = removeArticleSelectedListByIds,
                 clearAllArticleAndMovementSelected = clearAllArticleAndMovementSelected,
                 removeArticlesAndMovementByArticleId = removeArticlesAndMovementByArticleId,
-                getUserLoggedUsername = getUserLoggedUsername
+                getUserLoggedUsername = getUserLoggedUsername,
+                changeZoneName = changeZoneName
             )
 
 

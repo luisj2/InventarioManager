@@ -98,6 +98,8 @@ class ArticleListSelectorViewModel (
                 updateState { copy(sortList = sortList - event.sortType) }
                 applyFilters()
             }
+
+            is ArticleListSelectorUiEvent.ToggleDescritionDialog -> updateState { copy(showDescriptionDialog = event.state) }
         }
     }
 

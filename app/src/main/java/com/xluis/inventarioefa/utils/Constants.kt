@@ -38,6 +38,7 @@ const val FIRESTORE_ZONE_MEMEBERS_FIELD = "membersId"
 const val FIRESTORE_ZONE_OWNER_FIELD = "ownerId"
 const val FIRESTORE_ZONE_PARENT_LIST_FIELD = "parentIdList"
 const val FIRESTORE_ZONE_NAME_FIELD = "name"
+const val FIRESTORE_ZONE_MEMBERS_FIELD = "members"
 
 
 //Firestore Movements Fields
@@ -60,3 +61,6 @@ const val SVG_CODE = "image/svg+xml"
 const val YOUR_MOVE_ROOM = "Tu"
 const val SELECTED_ARTICLES_KEY = "selected_articles"
 const val SELECTED_MOVEMENTS_KEY = "selected_movements"
+
+//LOCAL DATABASE
+const val DATABASE_NAME = "Inventary_DB"

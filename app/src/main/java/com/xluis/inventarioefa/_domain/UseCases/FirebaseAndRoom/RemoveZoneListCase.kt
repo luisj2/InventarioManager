@@ -1,4 +1,4 @@
-package com.xluis.inventarioefa._domain.UseCases
+package com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom
 
 import com.xluis.inventarioefa._domain.model.DataClass.Result.ValidationResult
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone

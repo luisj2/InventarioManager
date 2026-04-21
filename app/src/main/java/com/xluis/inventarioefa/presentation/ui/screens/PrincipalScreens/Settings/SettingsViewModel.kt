@@ -67,7 +67,6 @@ class SettingsViewModel(
 
         // Si no hay userId, actualiza el estado y sal
         val userId = _uiState.value.userId
-
         if (userId == null) {
             updateState { copy(isLoggedIn = isLoggedIn, username = null) }
             return
@@ -75,31 +74,24 @@ class SettingsViewModel(
 
         // Lanza la coroutine para obtener el username
         viewModelScope.launch {
-            // Indica que estamos cargando
+            // Activar loading
             updateState { copy(isLoading = true) }
 
-            getUserLoggedUsername(userId)
-                .onSuccess { username ->
-                    // Actualiza estado con username recibido
-                    updateState {
-                        copy(
-                            isLoggedIn = isLoggedIn,
-                            username = username,
-                            isLoading = false
-                        )
+            try {
+                getUserLoggedUsername(userId)
+                    .onSuccess { username ->
+                        // Actualiza estado con username recibido
+                        updateState { copy(isLoggedIn = isLoggedIn, username = username) }
                     }
-                }
-                .onError { error ->
-                    // Muestra toast y actualiza estado con username null
-                    showToast(error.message)
-                    updateState {
-                        copy(
-                            isLoggedIn = isLoggedIn,
-                            username = null,
-                            isLoading = false
-                        )
+                    .onError { error ->
+                        // Muestra toast y actualiza estado con username null
+                        showToast(error.message)
+                        updateState { copy(isLoggedIn = isLoggedIn, username = null) }
                     }
-                }
+            } finally {
+                // Desactivar loading siempre
+                updateState { copy(isLoading = false) }
+            }
         }
     }
 

@@ -50,6 +50,7 @@ import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,12 +71,15 @@ import com.xluis.inventarioefa._domain.util.parseArticlesFromSVG
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.AddMemberDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.AddRemoveQuantityDialog
+import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ChangeZoneNameDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmDeleteDialog
+import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmDeleteMemberDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmExitDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.MoveQuantityDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.PageZoneItems.BaseZonePages
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.PageZoneItems.ShareZonePages
 import com.xluis.inventarioefa.utils.DefaultButton
+import com.xluis.inventarioefa.utils.LoadingIndicator
 import com.xluis.inventarioefa.utils.MovementsList
 import com.xluis.inventarioefa.utils.toast
 import kotlinx.coroutines.launch
@@ -95,7 +99,7 @@ fun ZoneInfoScreen(
     val context = LocalContext.current
 
     val backLogic: () -> Unit = rememberBackLogic(
-        uiState,
+        viewModel.uiState,
         onEvent = { event -> viewModel.onEvent(event) },
         onNavigateBack
     )
@@ -166,6 +170,10 @@ fun ZoneInfoScreen(
         }
     }
 
+    if(uiState.isLoading){
+        LoadingIndicator()
+    }
+
     ZoneInfoContent(
         uiState = uiState,
         onEvent = { event -> viewModel.onEvent(event) },
@@ -226,15 +234,30 @@ private fun Dialogs(
             onEvent(ZoneInfoUiEvent.DissmissQuantityDialog)
         }
     )
+
+    ConfirmDeleteMemberDialog(
+        show = uiState.showDeleteMemberDialog,
+        memberName = uiState.zoneMemberToRemove?.name ?: "este miembro",
+        onConfirm = { onEvent(ZoneInfoUiEvent.RemoveMember) },
+        onDismiss = { onEvent(ZoneInfoUiEvent.DissmissRemoveMemberDialog) }
+    )
+
+    ChangeZoneNameDialog(
+        show = uiState.showChangeZoneNameDialog,
+        onDismiss = { onEvent(ZoneInfoUiEvent.DismissZoneNameDialog) },
+        onSaveClick = {newZoneName -> onEvent(ZoneInfoUiEvent.ChangeZoneName(newZoneName))}
+    )
 }
 
 
 @Composable
 fun rememberBackLogic(
-    uiState: ZoneInfoUiState,
+    uiStateState: State<ZoneInfoUiState>,
     onEvent: (ZoneInfoUiEvent) -> Unit,
     onNavigateBack: () -> Unit
 ): () -> Unit {
+    val uiState by uiStateState
+
     val backAction: () -> Unit = {
         if (uiState.articlesToSaveList.isNotEmpty() || uiState.movementsToSaveList.isNotEmpty()) {
             onEvent(ZoneInfoUiEvent.ShowConfirmLeftDialog)
@@ -247,7 +270,6 @@ fun rememberBackLogic(
 
     return backAction
 }
-
 
 
 @Composable
@@ -291,6 +313,7 @@ private fun ZoneInfoContent(
                     onToggleSelectionMode = {
                         onEvent(ZoneInfoUiEvent.ToggleSelectionDeleteArticleMode(true))
                     },
+                    onEditZoneName = {onEvent(ZoneInfoUiEvent.ShowZoneNameDialog)},
                     onBack = {
                         onEvent(ZoneInfoUiEvent.NavigateBackShowDialog)
                     }
@@ -350,15 +373,8 @@ private fun ZoneInfoContent(
                             isOwner = uiState.userId == uiState.zone?.ownerId,
                             memberList = uiState.memberList,
                             owner = uiState.ownerMember,
-                            onDeleteMember = { memberId ->
-                                onEvent(
-                                    ZoneInfoUiEvent.RemoveMember(
-                                        memberId
-                                    )
-                                )
-                            }
+                            onDeleteMember = { member -> onEvent(ZoneInfoUiEvent.ShowRemoveMemberDialog(member)) }
                         )
-
                         else -> Unit
                     }
                 }
@@ -413,7 +429,7 @@ private fun MemberListContent(
     owner: ZoneMember?,
     memberList: List<ZoneMember>,
     isOwner: Boolean,
-    onDeleteMember: (memberId: String) -> Unit
+    onDeleteMember: (member : ZoneMember) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize()
@@ -426,7 +442,7 @@ private fun MemberListContent(
                         member = it,
                         isOwner = true,
                         showDelete = false,
-                        onDelete = { onDeleteMember(it.id) },
+                        onDelete = { onDeleteMember(it) },
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
@@ -454,7 +470,7 @@ private fun MemberListContent(
                 member = member,
                 isOwner = false,
                 showDelete = isOwner,
-                onDelete = { onDeleteMember(member.id) },
+                onDelete = { onDeleteMember(member) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -722,6 +738,7 @@ fun ZoneInfoTopBar(
     onBack: () -> Unit,
     onShareZone: () -> Unit,
     onSaveZone: () -> Unit,
+    onEditZoneName : () -> Unit,
     onToggleSelectionMode: () -> Unit,
 ) {
     Box(
@@ -753,6 +770,18 @@ fun ZoneInfoTopBar(
                 color = Color.Black
             )
 
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 🔥 BOTÓN EDITAR (LÁPIZ)
+            IconButton(
+                onClick = onEditZoneName
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Editar nombre",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
 
             Icon(

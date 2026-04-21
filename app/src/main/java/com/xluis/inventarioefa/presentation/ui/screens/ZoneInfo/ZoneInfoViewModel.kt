@@ -11,19 +11,20 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserN
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserLoggedUsername
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.SendZoneUserRequest
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.RemoveZoneMember
-import com.xluis.inventarioefa._domain.UseCases.GetArticlesByZoneId
-import com.xluis.inventarioefa._domain.UseCases.GetMovementsByZoneId
-import com.xluis.inventarioefa._domain.UseCases.GetZoneById
-import com.xluis.inventarioefa._domain.UseCases.GetZoneNameById
-import com.xluis.inventarioefa._domain.UseCases.InsertMovements
-import com.xluis.inventarioefa._domain.UseCases.RemoveArticlesByIdList
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.ChangeZoneName
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetArticlesByZoneId
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetMovementsByZoneId
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneById
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneNameById
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.InsertMovements
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveArticlesByIdList
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.SaveDatabaseChanges
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.UpdateArticleCount
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.ClearAllArticleAndMovementSelected
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.GetArticlesByScreenAndZoneIds
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.RemoveArticleSelectedListByIds
 import com.xluis.inventarioefa._domain.UseCases.Room.MovementSelected.GetMovementsByScreenAndZoneIds
 import com.xluis.inventarioefa._domain.UseCases.Room.RemoveArticlesAndMovementByArticleId
-import com.xluis.inventarioefa._domain.UseCases.SaveDatabaseChanges
-import com.xluis.inventarioefa._domain.UseCases.UpdateArticleCount
 import com.xluis.inventarioefa._domain.model.DataClass.ArticleMovement
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
@@ -71,7 +72,8 @@ class ZoneInfoViewModel(
     private val removeArticleSelectedListByIds : RemoveArticleSelectedListByIds,
     private val clearAllArticleAndMovementSelected : ClearAllArticleAndMovementSelected,
     private val removeArticlesAndMovementByArticleId : RemoveArticlesAndMovementByArticleId,
-    private val getUserLoggedUsername: GetUserLoggedUsername
+    private val getUserLoggedUsername: GetUserLoggedUsername,
+    private val changeZoneName: ChangeZoneName
 ) : ViewModel() {
 
     private val _uiState = mutableStateOf(ZoneInfoUiState())
@@ -214,7 +216,9 @@ class ZoneInfoViewModel(
 
             is ZoneInfoUiEvent.ToggleShareDialogState -> updateState { copy(shareDialogState = event.state) }
             is ZoneInfoUiEvent.ShowToast -> showToast(event.message)
-            is ZoneInfoUiEvent.RemoveMember -> removeMember(event.memberId)
+            is ZoneInfoUiEvent.RemoveMember -> _uiState.value.zoneMemberToRemove?.let { member ->
+                removeMember(member.id)
+            }
             ZoneInfoUiEvent.OpenSVGSelector -> {
                 openSVGSelectorCall()
             }
@@ -299,7 +303,52 @@ class ZoneInfoViewModel(
                 updateState { copy(articleToModifyCountSelected = event.articleToModify) }
             }
 
+            is ZoneInfoUiEvent.ShowRemoveMemberDialog ->{
+                updateState { copy(showDeleteMemberDialog = true, zoneMemberToRemove = event.memberSelected) }
+            }
+
+            ZoneInfoUiEvent.DissmissRemoveMemberDialog ->{
+                updateState { copy(showConfirmLeftDialog = false, zoneMemberToRemove = null) }
+            }
+
+            ZoneInfoUiEvent.ShowZoneNameDialog -> updateState { copy(showChangeZoneNameDialog = true) }
+            ZoneInfoUiEvent.DismissZoneNameDialog -> updateState { copy(showChangeZoneNameDialog = false) }
+            is ZoneInfoUiEvent.ChangeZoneName -> changeZoneNameByStorageType(event.newZoneName)
+
             else -> {}
+        }
+    }
+
+    private fun changeZoneNameByStorageType(newZoneName : String) {
+        val state = _uiState.value
+        val zoneId = state.zone?.id ?: run {
+            showToast("No se ha encontrado la zona")
+            return
+        }
+        val storageType = state.storageType
+
+        if(storageType == StorageType.FIREBASE && zoneId == state.zone.ownerId){
+            showToast("No puedes cambiar el nombre de la zona sin ser el propietario")
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                updateState { copy(isLoading = true) }
+                changeZoneName(zoneId, newZoneName, storageType)
+                    .onSuccess {
+                        showToast("El nombre de la zona a cambiado correctamente")
+                        updateZoneById(zoneId)
+                    }
+                    .onError { error -> showToast(error.message) }
+            } finally {
+                updateState {
+                    copy(
+                        isLoading = false,
+                        showChangeZoneNameDialog = false
+                    )
+                }
+            }
         }
     }
 
@@ -585,11 +634,22 @@ class ZoneInfoViewModel(
             showToast("No se ha encontrado la zona")
             return
         }
-        updateState { copy(isLoading = true) }
         viewModelScope.launch {
-            removeZoneMember(zoneId, memberId)
+            updateState { copy(isLoading = true) }
+            try {
+                removeZoneMember(zoneId, memberId)
+                    .onSuccess {
+                        updateZoneById(zoneId)
+                        showToast("Miembro eliminado correctamente")
+                    }
+                    .onError {error -> showToast(error.message) }
+            }finally {
+                updateState { copy(
+                    showDeleteMemberDialog = false,
+                    isLoading = false
+                ) }
+            }
         }
-        updateState { copy(isLoading = false) }
     }
 
     private fun getMovementList() {
@@ -745,6 +805,7 @@ class ZoneInfoViewModel(
         }
 
         updateState { copy(memberList = members) }
+
     }
 
 
@@ -774,6 +835,7 @@ class ZoneInfoViewModel(
                 showToast("No se ha encontrado la zona")
                 return@launch
             }
+
             updateState { copy(isLoading = true) }
 
             val articlesToSave = state.articlesToSaveList
@@ -781,8 +843,24 @@ class ZoneInfoViewModel(
             val storageType = state.storageType
 
             saveDatabaseChanges(zoneId, articlesToSave, movementsToSave, storageType)
-                .onSuccess { handleSaveSuccess() }
-                .onError { error -> showToast(error.message) }
+                .onSuccess {
+                    val clearResult = clearToSaveList()
+                    clearResult.onSuccess {
+                        updateState {
+                            copy(
+                                articlesToSaveList = emptyList(),
+                                movementsToSaveList = emptyList()
+                            )
+                        }
+                        updateZoneById(zoneId)
+                        showToast("Se han actualizado los datos correctamente")
+                    }.onError { error ->
+                        showToast("No se pudieron limpiar los datos: ${error.message}")
+                    }
+                }
+                .onError { error ->
+                    showToast(error.message)
+                }
 
             updateState { copy(isLoading = false) }
         }

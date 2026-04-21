@@ -14,6 +14,8 @@ suspend fun ValidationResult.flatMapSuspend(transform: suspend () -> ValidationR
         is ValidationResult.Error -> this
     }
 
+fun ValidationResult.toBoolean(): Boolean = this is ValidationResult.Success
+
 suspend fun ValidationResult.flatMapRollback(
     rollback: suspend () -> Unit,
     transform: suspend () -> ValidationResult

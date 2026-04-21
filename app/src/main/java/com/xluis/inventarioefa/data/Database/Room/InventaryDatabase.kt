@@ -26,7 +26,7 @@ import com.xluis.inventarioefa.domain.model.Database.Room.Article.ArticleZoneDao
         ArticleSelectedEntity::class,
         MovementSelectedEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )
 @TypeConverters(Converters::class)

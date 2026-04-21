@@ -5,8 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Auth.IsUserLoggedIn
-import com.xluis.inventarioefa._domain.UseCases.GetAllZoneList
-import com.xluis.inventarioefa._domain.UseCases.RemoveZoneListCase
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetAllZoneList
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveZoneListCase
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
 import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
@@ -14,6 +14,7 @@ import com.xluis.inventarioefa.data.Database.Datastore.UserDataStore
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 import com.xluis.inventarioefa.utils.Filters.filterZones
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
@@ -187,20 +188,31 @@ class ZonePrincipalViewModel(
 
     private fun deleteSelectedZones() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
+            // Activar loading
+            updateState { copy(isLoading = true) }
 
-            val state = _uiState.value
-            val userId = state.userId ?: return@launch showToast("El id del usuario no es valido")
-
-            removeZoneListCase(userId, state.selectionToRemoveZones.toList())
-                .onSuccess {
-                    _uiState.value =
-                        _uiState.value.copy(selectionMode = false, selectionToRemoveZones = setOf())
-                    callAndUpdateUserZoneList()
+            try {
+                val state = _uiState.value
+                val userId = state.userId ?: run {
+                    showToast("El id del usuario no es válido")
+                    return@launch
                 }
-                .onError { error -> showToast(error.message) }
 
-            _uiState.value = _uiState.value.copy(isLoading = false)
+                removeZoneListCase(userId, state.selectionToRemoveZones.toList())
+                    .onSuccess {
+                        // Limpiar selección y actualizar lista de zonas
+                        updateState {
+                            copy(selectionMode = false, selectionToRemoveZones = setOf())
+                        }
+                        callAndUpdateUserZoneList()
+                    }
+                    .onError { error ->
+                        showToast(error.message)
+                    }
+            } finally {
+                // Desactivar loading siempre
+                updateState { copy(isLoading = false) }
+            }
         }
     }
 
@@ -212,13 +224,26 @@ class ZonePrincipalViewModel(
                 return@launch
             }
 
-            getAllZoneList(userId)
-                .onSuccess { allZoneList ->
-                    updateState { copy(allZoneList = allZoneList) }
-                }
-                .onError { error -> showToast(error.message) }
+            // Activar loading
+            updateState { copy(isLoading = true) }
 
-            applyFilters()
+            try {
+                // Suscribirse al Flow de zonas
+                getAllZoneList(userId)
+                    .catch { throwable ->
+                        // Manejo de errores del Flow
+                        showToast(throwable.message ?: "Error al obtener zonas")
+                    }
+                    .collect { allZoneList ->
+                        // Actualiza la lista de zonas
+                        updateState { copy(allZoneList = allZoneList) }
+                        // Aplica filtros
+                        applyFilters()
+                    }
+            } finally {
+                // Desactivar loading al final
+                updateState { copy(isLoading = false) }
+            }
         }
     }
 

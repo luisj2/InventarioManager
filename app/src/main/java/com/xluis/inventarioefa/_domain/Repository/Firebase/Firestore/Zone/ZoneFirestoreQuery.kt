@@ -8,6 +8,7 @@ import com.xluis.inventarioefa.data.Model.Firestore.Movement.ArticleMovementFire
 import com.xluis.inventarioefa.data.Model.Firestore.Zone.ZoneFirestore
 import com.xluis.inventarioefa.data.Model.Firestore.ZoneFullFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
+import kotlinx.coroutines.flow.Flow
 
 interface ZoneFirestoreQuery {
 
@@ -32,6 +33,8 @@ interface ZoneFirestoreQuery {
     ): SuspendResult<Boolean>
 
     //Zones
+
+    suspend fun changeZoneName (zoneId : String,newZoneName : String) : SuspendResult<Boolean>
     suspend fun acceptZoneRequest(
         request: ZoneRequest
     ): SuspendResult<Boolean>
@@ -68,9 +71,19 @@ interface ZoneFirestoreQuery {
     ): SuspendResult<Boolean>
 
     //Get
+
+    fun getUserZonesFlow (userId : String) : Flow<List<ZoneFirestore>>
+
+    suspend fun getZoneById (zoneId : String) : SuspendResult<ZoneFirestore>
+
+    fun getZoneByIdFlow (zoneId : String) : Flow<ZoneFirestore>
+
+    fun getUserArticleMovementsFlow(userId: String): Flow<List<ArticleMovementFirestore>>
     suspend fun getAllZones(): SuspendResult<List<ZoneFirestore>>
 
     suspend fun getAllArticleList(zoneId: String): SuspendResult<List<ArticleFirestore>>
+
+    fun getAllArticleListFlow (zoneId : String) : Flow<List<ArticleFirestore>>
 
     suspend fun getUserArticleMovements(userId : String) : SuspendResult<List<ArticleMovementFirestore>>
 
@@ -83,7 +96,6 @@ interface ZoneFirestoreQuery {
 
     suspend fun getRootZonesListByParentIdList(parentList: List<String>): SuspendResult<List<ZoneFirestore>>
 
-    suspend fun getZoneById(zoneId: String): SuspendResult<ZoneFirestore>
     suspend fun getZoneNameById(zoneId: String): SuspendResult<String>
     suspend fun getZoneListByIdList(idList: List<String>): SuspendResult<List<ZoneFirestore>>
 

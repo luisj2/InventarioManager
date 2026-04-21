@@ -818,7 +818,7 @@ fun IconDropDownSelector(
     optionList: List<String>,
     onOptionSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    dropdownTextColor: Color = Color.Black
+    dropdownTextColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -827,7 +827,7 @@ fun IconDropDownSelector(
             Icon(
                 imageVector = icon,
                 contentDescription = "Abrir menú",
-                tint = Color.Black
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -1363,7 +1363,7 @@ fun SearchAndFiltersBar(
 
         // Barra de búsqueda + selector
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             DefaultSearchBar(
@@ -1416,32 +1416,30 @@ fun ZoneList(
 }
 
 @Composable
-fun ZoneRefreshList(
+fun ZoneListSimple(
     zones: List<Zone>,
     allZonesList: List<Zone>,
     selectedZones: List<Zone>,
-    isRefreshing: Boolean,
-    onRefresh: () -> Unit,
     onZoneClick: ((Zone) -> Unit)? = null,
     onZoneLongClick: ((Zone) -> Unit)? = null,
     onAddSubzoneClick: ((parentId: String, storageType: StorageType) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    PullToRefreshLazyColumn(
-        items = zones,
-        isRefreshing = isRefreshing,
-        onRefresh = onRefresh,
-        modifier = modifier
-    ) { zone ->
-
-        ZoneTree(
-            zone = zone,
-            allZonesList = allZonesList,
-            navigateToCreateZone = onAddSubzoneClick,
-            onZoneClick = onZoneClick ?: {},
-            selectedZones = selectedZones,
-            onZoneLongClick = onZoneLongClick
-        )
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        zones.forEach { zone ->
+            ZoneTree(
+                zone = zone,
+                allZonesList = allZonesList,
+                navigateToCreateZone = onAddSubzoneClick,
+                onZoneClick = onZoneClick ?: {},
+                selectedZones = selectedZones,
+                onZoneLongClick = onZoneLongClick
+            )
+        }
     }
 }
 
@@ -1476,7 +1474,7 @@ private fun ActiveFiltersRow(
                         Text(
                             text = filter.displayName,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = Color.White
                         )
                         IconButton(
                             onClick = { onRemoveFilter(filter) },

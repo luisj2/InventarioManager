@@ -28,6 +28,7 @@ import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_ARTICLE_SUBCOLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_COLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_MOVEMENTS_SUBCOLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_CHILD_LIST_FIELD_FIRESTORE
+import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_MEMBERS_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_MEMEBERS_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_NAME_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_OWNER_FIELD
@@ -35,7 +36,10 @@ import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_PARENT_LIST_FIELD
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
@@ -211,6 +215,18 @@ class ZoneFirestoreRepository(
                 // 🔹 Si algo falla, toda la transaction se revierte automáticamente
                 true
             }.await()
+        }
+    }
+
+    override suspend fun changeZoneName(
+        zoneId: String,
+        newZoneName: String
+    ): SuspendResult<Boolean> {
+        return executeFirestoreOperation {
+            val zoneCollection = getZoneCollection()
+            val docRef = zoneCollection.document(zoneId)
+            docRef.update(FIRESTORE_ZONE_NAME_FIELD,newZoneName).await()
+            true
         }
     }
 
@@ -436,6 +452,40 @@ class ZoneFirestoreRepository(
     }
 
 
+    override fun getUserZonesFlow(userId: String): Flow<List<ZoneFirestore>> = callbackFlow {
+
+        var ownerZones: List<ZoneFirestore> = emptyList()
+        var memberZones: List<ZoneFirestore> = emptyList()
+
+        fun emitCombined() {
+            val combined = (ownerZones + memberZones)
+                .distinctBy { it.id } // evitar duplicados
+            trySend(combined)
+        }
+
+        val ownerListener = getZoneCollection()
+            .whereEqualTo(FIRESTORE_ZONE_OWNER_FIELD, userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                ownerZones = snapshot?.toObjects(ZoneFirestore::class.java) ?: emptyList()
+                emitCombined()
+            }
+
+        val memberListener = getZoneCollection()
+            .whereArrayContains(FIRESTORE_ZONE_MEMEBERS_FIELD, userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+                memberZones = snapshot?.toObjects(ZoneFirestore::class.java) ?: emptyList()
+                emitCombined()
+            }
+
+        awaitClose {
+            ownerListener.remove()
+            memberListener.remove()
+        }
+    }
+
+
     override suspend fun getAllZones(): SuspendResult<List<ZoneFirestore>> {
         return executeFirestoreOperation {
             getZoneCollection().get()
@@ -446,6 +496,27 @@ class ZoneFirestoreRepository(
     override suspend fun getAllArticleList(zoneId: String): SuspendResult<List<ArticleFirestore>> {
         return executeFirestoreOperation {
             getArticleCollection(zoneId).get().await().toObjects(ArticleFirestore::class.java)
+        }
+    }
+
+    override fun getAllArticleListFlow(zoneId: String): Flow<List<ArticleFirestore>> = callbackFlow {
+        // Referencia a la colección de artículos de la zona
+        val collectionRef = getArticleCollection(zoneId)
+
+        // Listener en tiempo real
+        val listenerRegistration = collectionRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error) // cerramos el Flow en caso de error
+                return@addSnapshotListener
+            }
+
+            val articles = snapshot?.toObjects(ArticleFirestore::class.java) ?: emptyList()
+            trySend(articles) // emitimos la lista actualizada
+        }
+
+        // Eliminamos el listener cuando el Flow se cancela
+        awaitClose {
+            listenerRegistration.remove()
         }
     }
 
@@ -587,6 +658,80 @@ class ZoneFirestoreRepository(
         }
     }
 
+    override fun getZoneByIdFlow(zoneId: String): Flow<ZoneFirestore> = callbackFlow {
+        // Obtenemos la referencia al documento de la zona
+        val docRef = getZoneDocumentRef(zoneId)
+
+        // Listener de Firestore para cambios en tiempo real
+        val listenerRegistration = docRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                // En caso de error cerramos el Flow con excepción
+                close(error)
+                return@addSnapshotListener
+            }
+
+            val zone = snapshot?.toObject(ZoneFirestore::class.java)
+            if (zone != null) {
+                trySend(zone) // emitimos la zona actualizada
+            }
+        }
+
+        // Eliminamos el listener cuando se cierra el Flow
+        awaitClose {
+            listenerRegistration.remove()
+        }
+    }
+
+    override fun getUserArticleMovementsFlow(userId: String): Flow<List<ArticleMovementFirestore>> = callbackFlow {
+
+        // 🔹 Escucha las zonas donde el usuario es owner
+        val ownerListener = getZoneCollection()
+            .whereEqualTo(FIRESTORE_ZONE_OWNER_FIELD, userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+
+                val ownerZones = snapshot?.toObjects(ZoneFirestore::class.java) ?: emptyList()
+                ownerZones.forEach { zone ->
+                    val zoneId = zone.id ?: return@forEach
+                    // Escucha movimientos de esta zona
+                    getMovementsCollection(zoneId)
+                        .addSnapshotListener { movementSnapshot, movementError ->
+                            if (movementError != null) return@addSnapshotListener
+                            val movements = movementSnapshot?.toObjects(ArticleMovementFirestore::class.java)
+                                ?: emptyList()
+                            trySend(movements)
+                        }
+                }
+            }
+
+        // 🔹 Escucha las zonas donde el usuario es miembro
+        val memberListener = getZoneCollection()
+            .whereArrayContains(FIRESTORE_ZONE_MEMBERS_FIELD, userId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) return@addSnapshotListener
+
+                val memberZones = snapshot?.toObjects(ZoneFirestore::class.java) ?: emptyList()
+                memberZones.forEach { zone ->
+                    val zoneId = zone.id ?: return@forEach
+                    // Escucha movimientos de esta zona
+                    getMovementsCollection(zoneId)
+                        .addSnapshotListener { movementSnapshot, movementError ->
+                            if (movementError != null) return@addSnapshotListener
+                            val movements = movementSnapshot?.toObjects(ArticleMovementFirestore::class.java)
+                                ?: emptyList()
+                            trySend(movements)
+                        }
+                }
+            }
+
+        // 🔹 Eliminar listeners cuando se cierre el Flow
+        awaitClose {
+            ownerListener.remove()
+            memberListener.remove()
+        }
+    }
+
+
     override suspend fun getZoneNameById(zoneId: String): SuspendResult<String> {
         return executeFirestoreOperation {
 
@@ -721,24 +866,39 @@ class ZoneFirestoreRepository(
     override suspend fun deleteZoneById(
         userId: String,
         zoneId: String
-    ): SuspendResult<Boolean> =
-        executeBatchOperation { batch ->
+    ): SuspendResult<Boolean> = executeBatchOperation { batch ->
 
-            val zoneRef = getZoneDocumentRef(zoneId)
+        val zoneRef = getZoneDocumentRef(zoneId)
 
-            val userRef = fs
-                .collection(FIRESTORE_USER_COLLECTION)
-                .document(userId)
+        val zoneSnapshot = try {
+            zoneRef.get().await()
+        } catch (e: Exception) {
+            throw Exception("No se pudo obtener la zona: ${e.message}")
+        } ?: throw Exception("Zona no encontrada")
 
+        // Obtener ownerId
+        val ownerId = zoneSnapshot.getString("ownerId")
+            ?: throw Exception("No se encontró el owner de la zona")
+
+        // Referencia del usuario que intenta eliminar
+        val userRef = fs.collection(FIRESTORE_USER_COLLECTION).document(userId)
+
+        if (userId == ownerId) {
+            // 🔹 Si es owner: eliminar la zona completa
             batch.delete(zoneRef)
 
-            batch.update(
-                userRef,
-                FIRESTORE_USER_ZONES_LIST_FIELD,
-                FieldValue.arrayRemove(zoneId)
-            )
-        }
+            // Quitar la zona de todos los miembros
+            val members = zoneSnapshot.get("members") as? List<String> ?: emptyList()
+            members.forEach { memberId ->
+                val memberRef = fs.collection(FIRESTORE_USER_COLLECTION).document(memberId)
+                batch.update(memberRef, FIRESTORE_USER_ZONES_LIST_FIELD, FieldValue.arrayRemove(zoneId))
+            }
 
+        } else {
+            // 🔹 Si es miembro: solo quitar esta zona de su lista
+            batch.update(userRef, FIRESTORE_USER_ZONES_LIST_FIELD, FieldValue.arrayRemove(zoneId))
+        }
+    }
 
     private suspend fun removeZoneIdInUser(
         userId: String,

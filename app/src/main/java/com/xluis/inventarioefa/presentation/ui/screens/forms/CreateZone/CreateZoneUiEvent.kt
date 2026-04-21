@@ -16,13 +16,11 @@ sealed class CreateZoneUiEvent {
     data class ZoneParentIdChanged(val parentId: String) : CreateZoneUiEvent()
     data class CreateZoneClicked (val articleSelectedList : List<Article>) : CreateZoneUiEvent()
 
-    data class DeleteArticleInList (val articleId : String) : CreateZoneUiEvent()
 
     data class AddArticle(val articleEntity : ArticleEntity) : CreateZoneUiEvent()
 
     data object NavigateBack : CreateZoneUiEvent()
 
-    data object NavigateToZoneSelector : CreateZoneUiEvent()
 
     data object OpenIconSelector : CreateZoneUiEvent()
 

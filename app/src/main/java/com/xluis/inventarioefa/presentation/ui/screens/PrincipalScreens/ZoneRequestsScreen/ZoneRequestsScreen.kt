@@ -76,6 +76,10 @@ fun ZoneRequestsContent(
         return
     }
 
+    if(uiState.isLoading){
+        LoadingIndicator()
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(vertical = 8.dp)

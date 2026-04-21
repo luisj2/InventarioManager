@@ -1,6 +1,8 @@
 package com.xluis.inventarioefa.presentation.ui.screens.Auth.Login
 
+import RecoverPasswordDialog
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,14 +51,33 @@ fun LoginScreen(
 
     }
 
+
+    if (uiState.isLoading) {
+        LoadingIndicator()
+    }
+
+    RecoverPasswordDialog(
+        show = uiState.showRecoverPasswordDialog,
+        email = uiState.recoveryEmail,
+        onEmailChange = { email ->
+            viewModel.onEvent(LoginUiEvent.RecoveryEmailChanged(email))
+        },
+        onDismiss = {
+            viewModel.onEvent(LoginUiEvent.DismissRecoverPasswordDialog)
+        },
+        onSendClick = {
+            viewModel.onEvent(LoginUiEvent.SendResetEmail)
+            viewModel.onEvent(LoginUiEvent.DismissRecoverPasswordDialog)
+        },
+        isError = uiState.recoveryError != null,
+        errorMessage = uiState.recoveryError
+    )
+
     LoginScreenContent(
         uiState = uiState,
         onEvent = { event -> viewModel.onEvent(event) }
     )
 
-    if (uiState.isLoading) {
-        LoadingIndicator()
-    }
 
 }
 @Composable
@@ -66,7 +89,8 @@ private fun LoginScreenContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(top = 16.dp),
+            .padding(top = 16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(25.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -114,6 +138,17 @@ private fun LoginScreenContent(
                 .padding(horizontal = 30.dp),
             contentText = "Iniciar Sesión",
             onClick = { onEvent(LoginUiEvent.LoginClicked) }
+        )
+
+        Text(
+            text = "¿Olvidaste tu contraseña? Pulsa aquí",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
+                .padding(top = 12.dp)
+                .clickable {
+                    onEvent(LoginUiEvent.ShowRecoverPasswordDialog)
+                }
         )
     }
 }

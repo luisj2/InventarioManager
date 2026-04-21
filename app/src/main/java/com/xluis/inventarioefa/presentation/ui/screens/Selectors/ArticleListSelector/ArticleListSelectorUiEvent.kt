@@ -29,5 +29,13 @@ sealed class ArticleListSelectorUiEvent {
 
     data class OnRemoveSortType (val sortType : SortType) : ArticleListSelectorUiEvent()
 
+    data class ToggleDescritionDialog(val state : Boolean) : ArticleListSelectorUiEvent()
+
+    data class UpdateArticleDescription(
+        val groupIndex: Int,
+        val descIndex: Int,
+        val description: String
+    ) : ArticleListSelectorUiEvent()
+
     data object NavigateBack : ArticleListSelectorUiEvent()
 }

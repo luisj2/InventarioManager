@@ -4,5 +4,13 @@ sealed class LoginUiEvent {
     data class EmailChanged(val email: String) : LoginUiEvent()
     data class PasswordChanged(val password: String) : LoginUiEvent()
 
+    data object ShowRecoverPasswordDialog : LoginUiEvent()
+
+    data object DismissRecoverPasswordDialog : LoginUiEvent()
+
+    data class RecoveryEmailChanged (val email : String) : LoginUiEvent()
+
+    data object SendResetEmail : LoginUiEvent()
+
     data object LoginClicked : LoginUiEvent()
 }

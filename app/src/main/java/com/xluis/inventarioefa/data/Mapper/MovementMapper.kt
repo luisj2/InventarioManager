@@ -33,7 +33,7 @@ fun ArticleMovementFirestore.toDomain(): ArticleMovement {
 // ----------------------
 fun ArticleMovement.toFirestore(): ArticleMovementFirestore {
     return ArticleMovementFirestore(
-        id = if (this.id.isBlank()) null else this.id,
+        id = this.id.ifBlank { null },
         articleId = this.articleId,
         articleName = this.articleName,
         zoneName = this.zoneName,
@@ -46,7 +46,7 @@ fun ArticleMovement.toFirestore(): ArticleMovementFirestore {
 
 // Conversión de ArticleMovement a ArticleMovementsEntity
 fun ArticleMovement.toEntity(): ArticleMovementsEntity {
-    val zoneIdLong = zoneId.toLongOrNull() ?: 0L // por si zoneId no es convertible
+    val zoneIdLong = zoneId.toLongOrNull() ?: 0L
     return ArticleMovementsEntity(
         articleId = articleId.toLongOrNull() ?: 0,
         articleName = articleName,
