@@ -66,6 +66,15 @@ fun ZoneRequestsContent(
     uiState: ZoneRequestsUiState,
     onEvent: (event: ZoneRequestsUiEvent) -> Unit
 ) {
+    if(uiState.userId == null){
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "Inicia sesión para usar esta funcionalidad")
+        }
+        return
+    }
     if (uiState.requestsList.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),

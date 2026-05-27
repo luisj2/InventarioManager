@@ -78,8 +78,12 @@ interface ZoneDao {
     suspend fun getAllZoneFull(userId : String): List<ZoneWithArticlesAndMovements>
 
     @Transaction
-    @Query("SELECT * FROM Zone WHERE userId = :userId")
-    fun getAllZoneFullFlow(userId: String): Flow<List<ZoneWithArticlesAndMovements>>
+    @Query("""
+    SELECT * 
+    FROM Zone
+    WHERE userId = :userId
+       OR userId = ''
+""")    fun getAllZoneFullFlow(userId: String): Flow<List<ZoneWithArticlesAndMovements>>
 
 
     // ----------------- UPDATE -----------------

@@ -13,4 +13,6 @@ sealed class LoginUiEvent {
     data object SendResetEmail : LoginUiEvent()
 
     data object LoginClicked : LoginUiEvent()
+
+    data object NavigateToMainScreen : LoginUiEvent()
 }

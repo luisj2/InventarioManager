@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.outlined.Lock
@@ -838,7 +839,7 @@ fun IconDropDownSelector(
         ) {
             optionList.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(option, color = dropdownTextColor) },
+                    text = { Text(option, color = Color.White) },
                     onClick = {
                         onOptionSelected(option)
                         isExpanded = false
@@ -1363,8 +1364,11 @@ fun SearchAndFiltersBar(
 
         // Barra de búsqueda + selector
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             DefaultSearchBar(
                 modifier = Modifier.weight(1f),
@@ -1375,6 +1379,8 @@ fun SearchAndFiltersBar(
             )
 
             IconDropDownSelector(
+                icon = Icons.Default.Sort,
+                modifier = Modifier.size(48.dp), // 🔥 CLAVE PARA QUE NO SE DEFORME
                 optionList = ZoneSortOptions.entries.map { it.displayName },
                 onOptionSelected = { option ->
                     onFilterAdded(ZoneSortOptions.fromDisplayName(option))
@@ -1483,7 +1489,7 @@ private fun ActiveFiltersRow(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Eliminar filtro",
-                                tint = MaterialTheme.colorScheme.onPrimary
+                                tint = Color.White
                             )
                         }
                     }
@@ -1690,9 +1696,13 @@ fun ZoneItem(
                 Button(
                     onClick = { onAddSubzoneClick(zone.id ?: "", zone.storageType) },
                     shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier.height(36.dp)
+                    modifier = Modifier.height(36.dp),
+
                 ) {
-                    Text("Subzona")
+                    Text(
+                        text = "+Subzona",
+                        color = Color.White
+                    )
                 }
             }
         }

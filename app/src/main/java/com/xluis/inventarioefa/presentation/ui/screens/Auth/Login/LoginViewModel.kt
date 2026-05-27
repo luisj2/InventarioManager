@@ -57,6 +57,11 @@ class LoginViewModel(
 
             }
             LoginUiEvent.SendResetEmail -> sendResetEmail()
+            LoginUiEvent.NavigateToMainScreen -> {
+                viewModelScope.launch {
+                    _uiEffect.send(LoginUiEffect.navigateToMainScreen)
+                }
+            }
         }
     }
 
@@ -103,7 +108,7 @@ class LoginViewModel(
 
             loginUserUseCase(state.email, state.password)
                 .onSuccess {
-                    _uiEffect.send(LoginUiEffect.LoginSuccessful)
+                    _uiEffect.send(LoginUiEffect.navigateToMainScreen)
                 }
                 .onError { error ->
                     showToast(error.message)

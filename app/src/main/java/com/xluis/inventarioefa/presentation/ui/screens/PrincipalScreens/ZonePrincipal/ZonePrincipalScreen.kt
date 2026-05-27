@@ -61,11 +61,6 @@ fun ZonePrincipalScreen(
     val context = LocalContext.current
 
 
-    LaunchedEffect(uiState.userId) {
-        if(uiState.userId != null){
-            viewModel.onEvent(ZonePrincipalUiEvent.UpdateUserZoneList)
-        }
-    }
 
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
@@ -338,7 +333,7 @@ fun FancyFabMenu(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Para mí")
+                        Text("Para mí", color = Color.White)
                     }
                     Button(
                         onClick = {
@@ -348,7 +343,7 @@ fun FancyFabMenu(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Compartida")
+                        Text("Compartida", color = Color.White)
                     }
                 }
             }
@@ -364,8 +359,8 @@ fun FancyFabMenu(
         ) {
             Icon(
                 imageVector = if (isMenuOpen) Icons.Default.Close else Icons.Default.Add,
-                contentDescription = "Más opciones"
-            )
+                contentDescription = "Más opciones",
+                tint = Color.White            )
         }
     }
 }

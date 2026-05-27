@@ -326,7 +326,7 @@ private fun ZoneInfoContent(
                 FloatingActionButton(
                     onClick = { onEvent(ZoneInfoUiEvent.NavigateToArticleSelector) },
                     containerColor = MaterialTheme.colorScheme.primary
-                ) { Icon(Icons.Default.Add, contentDescription = "Seleccionar artículo") }
+                ) { Icon(Icons.Default.Add, contentDescription = "Seleccionar artículo", tint = Color.White) }
             }
         }
     ) { paddingValues ->

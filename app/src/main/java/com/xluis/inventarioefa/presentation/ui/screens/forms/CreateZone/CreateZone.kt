@@ -4,17 +4,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 import com.xluis.inventarioefa.utils.CurvedBorderBackground
-import com.xluis.inventarioefa.utils.DefaultButton
+import com.xluis.inventarioefa.utils.DefaultDropDownSelector
+import com.xluis.inventarioefa.utils.DefaultTextField
 import com.xluis.inventarioefa.utils.LoadingIndicator
 import com.xluis.inventarioefa.utils.toast
 
@@ -78,65 +80,101 @@ private fun SingleFormContent(
     onEvent: (event: CreateZoneUiEvent) -> Unit,
     showToast: (message: String) -> Unit
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
 
-        // 🔹 CONTENIDO SCROLLEABLE
+    Scaffold(
+        floatingActionButton = {
+
+            FloatingActionButton(
+                onClick = {
+                    onEvent(CreateZoneUiEvent.CreateZoneClicked(emptyList()))
+                },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Crear zona",
+                    tint = Color.White
+                )
+            }
+        }
+    ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .padding(paddingValues)
                 .padding(horizontal = 16.dp)
-                .padding(bottom = 80.dp), // 🔥 espacio para el botón
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
 
-            // 🔽 TODO TU CONTENIDO IGUAL (NO TOCAR)
+            // 🔙 BACK BUTTON
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(10.dp)
+                    .padding(top = 12.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Volver",
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .clickable { onEvent(CreateZoneUiEvent.NavigateBack) },
+                        .clickable {
+                            onEvent(CreateZoneUiEvent.NavigateBack)
+                        },
                     tint = Color.White
                 )
             }
 
+            // 🔹 TITLE
             Text(
                 "Crea tu Zona",
                 style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
+                color = Color.White,
+                modifier = Modifier.padding(top = 4.dp)
             )
 
             Text(
                 "Crea tu propia zona y asegúrate que el desorden no gane esta vez",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White
+                color = Color.White,
+                modifier = Modifier.padding(top = 2.dp, bottom = 4.dp)
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // 🔹 ZONE NAME
+            DefaultTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = uiState.zoneName,
+                onTextChange = {
+                    onEvent(CreateZoneUiEvent.ZoneNameChanged(it))
+                },
+                label = "Nombre de la zona",
+                rounded = true
+            )
 
-            // ... TODO lo demás igual ...
+            // 🔹 PARENT LABEL
+            Text(
+                text = "Zona padre",
+                color = Color.White,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, bottom = 2.dp)
+            )
+
+            // 🔹 DROPDOWN
+            DefaultDropDownSelector(
+                modifier = Modifier.fillMaxWidth(),
+                optionList = uiState.parentList.map { it.name },
+                labelText = "Zona padre",
+                selectedOption = uiState.parentZoneId ?: uiState.noParentSelectedText,
+                onOptionSelected = { selectedName ->
+                    onEvent(
+                        CreateZoneUiEvent.ZoneParentIdChanged(selectedName)
+                    )
+                }
+            )
         }
-
-        // 🔥 BOTÓN FIJO ABAJO
-        DefaultButton(
-            onClick = {
-                    onEvent(CreateZoneUiEvent.CreateZoneClicked(emptyList()))
-            },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(16.dp)
-                .height(50.dp),
-            contentText = "Crear Zona"
-        )
     }
 }

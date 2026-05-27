@@ -100,6 +100,7 @@ class ArticleListSelectorViewModel (
             }
 
             is ArticleListSelectorUiEvent.ToggleDescritionDialog -> updateState { copy(showDescriptionDialog = event.state) }
+            is ArticleListSelectorUiEvent.UpdateArticleDescription -> TODO()
         }
     }
 

@@ -2,22 +2,28 @@ package com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSel
 
 import ArticleCategory
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,7 +47,6 @@ import com.xluis.inventarioefa._domain.model.Enums.SortType
 import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.AddArticleDialog
 import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.DescriptionsDialog
 import com.xluis.inventarioefa.utils.ArticleItem
-import com.xluis.inventarioefa.utils.DefaultButton
 import com.xluis.inventarioefa.utils.DefaultDropDownSelector
 import com.xluis.inventarioefa.utils.LoadingIndicator
 import com.xluis.inventarioefa.utils.toast
@@ -98,7 +103,6 @@ private fun ArticleSelectorContent(
     showToast: (message: String) -> Unit
 ) {
 
-    val articleList = uiState.articleList
     val selectedArticles = uiState.selectedArticleList
 
     Scaffold(
@@ -108,6 +112,34 @@ private fun ArticleSelectorContent(
                     onEvent(ArticleListSelectorUiEvent.NavigateBack)
                 }
             )
+        },
+
+        // 🔥 FAB SOLO PARA AÑADIR
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    if (selectedArticles.isNotEmpty()) {
+                        onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(true))
+                    } else {
+                        showToast("Añade un artículo")
+                    }
+                }
+            ) {
+                BadgedBox(
+                    badge = {
+                        if (selectedArticles.isNotEmpty()) {
+                            Badge {
+                                Text("${selectedArticles.size}")
+                            }
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Añadir artículos"
+                    )
+                }
+            }
         }
     ) { paddingValues ->
 
@@ -117,58 +149,60 @@ private fun ArticleSelectorContent(
                 .padding(paddingValues)
         ) {
 
-            Box(
+            // 🔥 NUEVA TARJETA BONITA PARA CREAR ARTÍCULO
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                contentAlignment = Alignment.CenterEnd
+                onClick = {
+                    onEvent(ArticleListSelectorUiEvent.ToggleCreateArticleDialog(true))
+                }
             ) {
-                DefaultButton(
-                    contentText = "+ Crear artículo",
-                    onClick = {
-                        onEvent(ArticleListSelectorUiEvent.ToggleCreateArticleDialog(true))
-                    }
-                )
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = "Crear nuevo artículo",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = "Añade un artículo nuevo a tu inventario",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                DefaultButton(
-                    contentText = "+ Añadir ${selectedArticles.size}",
-                    onClick = {
-                        if (selectedArticles.isNotEmpty()) {
-                            onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(true))
-                        } else {
-                            showToast("Añade un artículo")
-                        }
-                    }
-                )
-            }
-
+            // 🔹 FILTROS
             ArticleFilterBar(
                 state = uiState,
-                onSearch = { query -> onEvent(ArticleListSelectorUiEvent.OnSearchQueryChanged(query)) },
+                onSearch = { query ->
+                    onEvent(ArticleListSelectorUiEvent.OnSearchQueryChanged(query))
+                },
                 onCategorySelected = { category ->
                     onEvent(
-                        ArticleListSelectorUiEvent.OnCategoryChanged(
-                            category
-                        )
+                        ArticleListSelectorUiEvent.OnCategoryChanged(category)
                     )
                 },
-                onSortSelected = { sort -> onEvent(ArticleListSelectorUiEvent.OnAddSortType(sort)) },
-                onSortRemoved = { sort -> onEvent(ArticleListSelectorUiEvent.OnRemoveSortType(sort)) }
+                onSortSelected = { sort ->
+                    onEvent(ArticleListSelectorUiEvent.OnAddSortType(sort))
+                },
+                onSortRemoved = { sort ->
+                    onEvent(ArticleListSelectorUiEvent.OnRemoveSortType(sort))
+                }
             )
 
-            // Lista de artículos
+            // 🔹 LISTA
             LazyColumn(
                 modifier = Modifier.weight(1f)
             ) {
                 items(uiState.filteredArticleList) { article ->
-                    val isArticleSelected = uiState.selectedArticleList.any { it.id == article.id }
+                    val isArticleSelected =
+                        uiState.selectedArticleList.any { it.id == article.id }
+
                     ArticleItem(
                         article = article,
                         isArticleSelected = isArticleSelected,
@@ -181,19 +215,16 @@ private fun ArticleSelectorContent(
                                     )
                                 )
                             } else {
-                                onEvent(ArticleListSelectorUiEvent.DeselectArticleByIdList(article.id))
+                                onEvent(
+                                    ArticleListSelectorUiEvent.DeselectArticleByIdList(article.id)
+                                )
                             }
                         }
                     )
                 }
             }
-
-
-            // Diálogo para crear un artículo
-
         }
     }
-
 }
 
 @Composable
@@ -341,7 +372,7 @@ fun SortButton(
             Icon(
                 imageVector = Icons.Default.Sort,
                 contentDescription = "Ordenar",
-                tint = Color.Black
+                tint = Color.White
             )
         }
 
@@ -351,7 +382,7 @@ fun SortButton(
         ) {
             SortType.entries.forEach { sort ->
                 DropdownMenuItem(
-                    text = { Text(sort.displayName) },
+                    text = { Text(text = sort.displayName, color = Color.White) },
                     onClick = {
                         expanded = false
                         onSortSelected(sort)
@@ -393,14 +424,14 @@ fun ArticleListSelectorTopBar(
 ) {
     CenterAlignedTopAppBar(
         title = {
-            Text(text = title, color = MaterialTheme.colorScheme.onPrimary)
+            Text(text = title, color = Color.White)
         },
         navigationIcon = {
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Volver",
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    tint = Color.White
                 )
             }
         },

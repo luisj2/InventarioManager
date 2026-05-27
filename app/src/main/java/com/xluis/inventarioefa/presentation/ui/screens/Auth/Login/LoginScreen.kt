@@ -44,7 +44,7 @@ fun LoginScreen(
     LaunchedEffect(Unit) {
         viewModel.uiEffect.collect { effect ->
             when (effect) {
-                LoginUiEffect.LoginSuccessful -> navigateToMainScreen()
+                LoginUiEffect.navigateToMainScreen -> navigateToMainScreen()
                 is LoginUiEffect.ShowToast -> context.toast(effect.message)
             }
         }
@@ -138,6 +138,16 @@ private fun LoginScreenContent(
                 .padding(horizontal = 30.dp),
             contentText = "Iniciar Sesión",
             onClick = { onEvent(LoginUiEvent.LoginClicked) }
+        )
+
+        DefaultButton(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 30.dp),
+            contentText = "Entrar sin sesión",
+            onClick = {
+                onEvent(LoginUiEvent.NavigateToMainScreen)
+            }
         )
 
         Text(

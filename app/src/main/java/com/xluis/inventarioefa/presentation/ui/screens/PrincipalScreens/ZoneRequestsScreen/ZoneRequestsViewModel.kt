@@ -50,7 +50,6 @@ class ZoneRequestsViewModel(
         viewModelScope.launch {
             val state = _uiState.value
             val userId = state.userId ?: run {
-                showToast("Usuario no válido")
                 return@launch
             }
 

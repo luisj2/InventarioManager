@@ -40,7 +40,7 @@ class ZonePrincipalViewModel(
         viewModelScope.launch {
             UserDataStore.getUserUid().collect { uid ->
                 updateState { copy(userId = uid) }
-                if (uid != null) callAndUpdateUserZoneList()
+                callAndUpdateUserZoneList()
             }
         }
     }
@@ -219,10 +219,7 @@ class ZonePrincipalViewModel(
 
     private fun callAndUpdateUserZoneList() {
         viewModelScope.launch {
-            val userId = _uiState.value.userId ?: run {
-                showToast("No se ha encontrado el usuario")
-                return@launch
-            }
+            val userId = _uiState.value.userId ?: ""
 
             // Activar loading
             updateState { copy(isLoading = true) }
