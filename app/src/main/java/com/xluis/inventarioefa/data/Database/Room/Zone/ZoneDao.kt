@@ -74,7 +74,7 @@ interface ZoneDao {
     suspend fun getZoneFull(zoneId: Long): ZoneWithArticlesAndMovements?
 
     @Transaction
-    @Query("SELECT * FROM Zone WHERE userId = :userId")
+    @Query("SELECT * FROM Zone WHERE userId = :userId OR userId = ''")
     suspend fun getAllZoneFull(userId : String): List<ZoneWithArticlesAndMovements>
 
     @Transaction

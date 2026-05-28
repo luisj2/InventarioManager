@@ -142,10 +142,7 @@ class CreateZoneViewModel(
             updateState { copy(isLoading = true) }
 
             try {
-                val userId = _uiState.value.userId ?: run {
-                    showToast("No se ha encontrado el usuario")
-                    return@launch
-                }
+                val userId = _uiState.value.userId ?: ""
 
                 val zoneSummaryList: List<ZoneSummary> = when (_uiState.value.storageType) {
 
