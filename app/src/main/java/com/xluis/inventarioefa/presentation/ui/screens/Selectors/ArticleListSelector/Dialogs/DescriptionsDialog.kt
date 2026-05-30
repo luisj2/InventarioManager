@@ -55,7 +55,7 @@ fun DescriptionsDialog(
 
                             // 🔹 Nombre del artículo
                             Text(
-                                text = "${group.article.name} (x${group.article.count})",
+                                text = "${group.articleName} (x${group.count})",
                                 style = MaterialTheme.typography.titleMedium
                             )
 

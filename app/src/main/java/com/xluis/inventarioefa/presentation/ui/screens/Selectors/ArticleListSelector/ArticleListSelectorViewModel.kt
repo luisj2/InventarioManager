@@ -10,6 +10,7 @@ import com.xluis.inventarioefa._domain.UseCases.Room.AddArtilesAndMovementSelect
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.CreateArticleCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.GetAllArticles
 import com.xluis.inventarioefa._domain.UseCases.Room.Zone.GetRoomZoneNameById
+import com.xluis.inventarioefa._domain.model.Articles.ArticleDescriptionGroup
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa._domain.model.Enums.SortType
 import com.xluis.inventarioefa._domain.util.articleToArticleMovement
@@ -27,12 +28,12 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-class ArticleListSelectorViewModel (
+class ArticleListSelectorViewModel(
     private val getRoomArticles: GetAllArticles,
     private val getFirestoreZoneNameById: GetFirestoreZoneNameById,
     private val getRoomZoneNameById: GetRoomZoneNameById,
     private val createArticle: CreateArticleCase,
-    private val addArtilesAndMovementSelected : AddArtilesAndMovementSelected,
+    private val addArtilesAndMovementSelected: AddArtilesAndMovementSelected,
     private val getUserLoggedUsername: GetUserLoggedUsername
 ) : ViewModel() {
 
@@ -60,6 +61,7 @@ class ArticleListSelectorViewModel (
             ArticleListSelectorUiEvent.GetAllArticles -> {
                 getAllArticles()
             }
+
             ArticleListSelectorUiEvent.NavigateBack -> navigateBack()
             is ArticleListSelectorUiEvent.DeselectArticleByIdList -> deselectArticle(event.articleId)
             is ArticleListSelectorUiEvent.SelectArticleList -> selectArticle(
@@ -78,29 +80,87 @@ class ArticleListSelectorViewModel (
             is ArticleListSelectorUiEvent.AddArticle -> {
                 addArticleInDatabase(event.article)
             }
-            is ArticleListSelectorUiEvent.InitValues -> updateState { copy(storageType = StorageType.fromName(event.storageType),zoneId = event.zoneId, screenId = event.screenId) }
+
+            is ArticleListSelectorUiEvent.InitValues -> updateState {
+                copy(
+                    storageType = StorageType.fromName(
+                        event.storageType
+                    ), zoneId = event.zoneId, screenId = event.screenId
+                )
+            }
+
             is ArticleListSelectorUiEvent.OnCategoryChanged -> {
                 updateState { copy(selectedCategory = event.category) }
                 applyFilters()
             }
+
             is ArticleListSelectorUiEvent.OnSearchQueryChanged -> {
                 updateState { copy(searchQuery = event.query) }
                 applyFilters()
             }
+
             is ArticleListSelectorUiEvent.OnAddSortType -> {
                 val sortList = _uiState.value.sortList
-                val newList = sortList.filter { it.sortOptionType != event.sortSelected.sortOptionType } + event.sortSelected
+                val newList =
+                    sortList.filter { it.sortOptionType != event.sortSelected.sortOptionType } + event.sortSelected
 
-                updateState { copy(sortList = newList  ) }
+                updateState { copy(sortList = newList) }
                 applyFilters()
             }
+
             is ArticleListSelectorUiEvent.OnRemoveSortType -> {
                 updateState { copy(sortList = sortList - event.sortType) }
                 applyFilters()
             }
 
-            is ArticleListSelectorUiEvent.ToggleDescritionDialog -> updateState { copy(showDescriptionDialog = event.state) }
-            is ArticleListSelectorUiEvent.UpdateArticleDescription -> TODO()
+            is ArticleListSelectorUiEvent.ToggleDescritionDialog -> {
+
+                updateState {
+
+                    copy(
+                        descriptionGroups =
+                            if (
+                                event.state &&
+                                descriptionGroups.isEmpty()
+                            ) {
+                                selectedArticleList.map { article ->
+
+                                    ArticleDescriptionGroup(
+                                        articleId = article.id,
+                                        articleName = article.name,
+                                        count = article.count,
+                                        descriptions = List(article.count) { "" }
+                                    )
+                                }
+                            } else {
+                                descriptionGroups
+                            },
+
+                        showDescriptionDialog = event.state
+                    )
+                }
+            }
+
+            is ArticleListSelectorUiEvent.UpdateArticleDescription -> {
+
+            val groups = uiState.value.descriptionGroups.toMutableList()
+
+            val group = groups[event.groupIndex]
+
+            val descriptions = group.descriptions.toMutableList()
+
+            descriptions[event.descIndex] = event.description
+
+            groups[event.groupIndex] = group.copy(
+                descriptions = descriptions
+            )
+
+            updateState {
+                copy(
+                    descriptionGroups = groups
+                )
+            }
+        }
         }
     }
 
@@ -180,7 +240,7 @@ class ArticleListSelectorViewModel (
         viewModelScope.launch {
             val state = _uiState.value
 
-            val userId : String = when (_uiState.value.storageType){
+            val userId: String = when (_uiState.value.storageType) {
                 StorageType.LOCAL -> YOUR_MOVE_ROOM
                 StorageType.FIREBASE -> {
                     state.userId ?: run {
@@ -191,8 +251,9 @@ class ArticleListSelectorViewModel (
             }
             val screenId = state.screenId
 
-            val articleSelectedList = state.selectedArticleList.map { it.copy(zoneId = state.zoneId) }
-            val userName = when(_uiState.value.storageType){
+            val articleSelectedList =
+                state.selectedArticleList.map { it.copy(zoneId = state.zoneId) }
+            val userName = when (_uiState.value.storageType) {
                 StorageType.LOCAL -> YOUR_MOVE_ROOM
                 StorageType.FIREBASE -> getUserLoggedUsername(userId).getOrNull() ?: "???"
             }
@@ -216,17 +277,20 @@ class ArticleListSelectorViewModel (
                 .onError { showToast(it.message) }
         }
     }
-    private suspend fun getZoneNameById (zoneId : String) : String{
-        return when(_uiState.value.storageType){
+
+    private suspend fun getZoneNameById(zoneId: String): String {
+        return when (_uiState.value.storageType) {
             StorageType.LOCAL -> {
                 val roomId = zoneId.toLongOrNull() ?: return "???"
                 getRoomZoneNameById(roomId)
             }
+
             StorageType.FIREBASE -> {
                 getFirestoreZoneNameById(zoneId)
             }
         }.getOrNull() ?: "???"
     }
+
     private fun applyFilters() {
         val state = _uiState.value
 

@@ -1,6 +1,7 @@
 package com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector
 
 import ArticleCategory
+import com.xluis.inventarioefa._domain.model.Articles.ArticleDescriptionGroup
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa._domain.model.Enums.SortType
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
@@ -18,6 +19,7 @@ data class ArticleListSelectorUiState (
     val searchQuery : String = "",
     val selectedCategory : ArticleCategory? = null,
     val sortList : List<SortType> = emptyList(),
-    val showDescriptionDialog : Boolean = false
+    val showDescriptionDialog : Boolean = false,
+    val descriptionGroups: List<ArticleDescriptionGroup> = emptyList(),
 
-)
+    )

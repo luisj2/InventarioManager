@@ -42,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.xluis.inventarioefa._domain.model.Articles.ArticleDescriptionGroup
 import com.xluis.inventarioefa._domain.model.Enums.SortType
 import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.AddArticleDialog
 import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.DescriptionsDialog
@@ -121,7 +120,7 @@ private fun ArticleSelectorContent(
                     if (selectedArticles.isNotEmpty()) {
                         onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(true))
                     } else {
-                        showToast("Añade un artículo")
+                        showToast("Añade algún artículo")
                     }
                 }
             ) {
@@ -239,14 +238,14 @@ private fun Dialogs(
     )
     DescriptionsDialog(
         showDialog = uiState.showDescriptionDialog,
-        groups = uiState.articleList.map { article ->
-            ArticleDescriptionGroup(
-                article = article,
-                descriptions = List(article.count) { "" }
+        groups = uiState.descriptionGroups,
+        onDismiss = {
+            onEvent(
+                ArticleListSelectorUiEvent.ToggleDescritionDialog(false)
             )
         },
-        onDismiss = { onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(false)) },
         onDescriptionChange = { groupIndex, descIndex, value ->
+
             onEvent(
                 ArticleListSelectorUiEvent.UpdateArticleDescription(
                     groupIndex = groupIndex,
@@ -255,7 +254,11 @@ private fun Dialogs(
                 )
             )
         },
-        onConfirm = { onEvent(ArticleListSelectorUiEvent.SaveSelectedArticles) }
+        onConfirm = {
+            onEvent(
+                ArticleListSelectorUiEvent.SaveSelectedArticles
+            )
+        }
     )
 }
 
