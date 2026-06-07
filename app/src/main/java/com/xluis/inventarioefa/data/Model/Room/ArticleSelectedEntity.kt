@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 data class ArticleSelectedEntity (
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val description : String? = null,
+    val descriptions : List<String> = emptyList(),
     val screenId: String,
     val articleId: String,
     val name: String = "",

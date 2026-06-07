@@ -34,16 +34,56 @@ import com.xluis.inventarioefa.data.Model.Room.ArticleEntity
 
 fun getDefaultArticles(): List<ArticleEntity> {
     return listOf(
-        ArticleEntity(name = "Caja", category = ArticleCategory.STORAGE.displayName),
-        ArticleEntity(name = "Computadora", category = ArticleCategory.TECHNOLOGY.displayName),
-        ArticleEntity(name = "Carro", category = ArticleCategory.VEHICLE.displayName),
-        ArticleEntity(name = "Etiqueta", category = ArticleCategory.LABEL.displayName),
-        ArticleEntity(name = "Herramienta", category = ArticleCategory.TOOLS.displayName),
-        ArticleEntity(name = "Documento", category = ArticleCategory.DOCUMENTS.displayName),
-        ArticleEntity(name = "Producto", category = ArticleCategory.PRODUCT.displayName),
-        ArticleEntity(name = "Cámara", category = ArticleCategory.TECHNOLOGY.displayName),
-        ArticleEntity(name = "Estante", category = ArticleCategory.STORAGE.displayName),
-        ArticleEntity(name = "Carpeta", category = ArticleCategory.DOCUMENTS.displayName)
+        ArticleEntity(
+            name = "Caja",
+            category = ArticleCategory.STORAGE.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Computadora",
+            category = ArticleCategory.TECHNOLOGY.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Carro",
+            category = ArticleCategory.VEHICLE.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Etiqueta",
+            category = ArticleCategory.LABEL.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Herramienta",
+            category = ArticleCategory.TOOLS.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Documento",
+            category = ArticleCategory.DOCUMENTS.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Producto",
+            category = ArticleCategory.PRODUCT.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Cámara",
+            category = ArticleCategory.TECHNOLOGY.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Estante",
+            category = ArticleCategory.STORAGE.displayName,
+            descriptions = emptyList()
+        ),
+        ArticleEntity(
+            name = "Carpeta",
+            category = ArticleCategory.DOCUMENTS.displayName,
+            descriptions = emptyList()
+        )
     )
 }
 

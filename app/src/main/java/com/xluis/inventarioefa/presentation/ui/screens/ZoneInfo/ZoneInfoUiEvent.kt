@@ -35,6 +35,10 @@ sealed class ZoneInfoUiEvent {
 
     data object SaveChanges : ZoneInfoUiEvent()
 
+    data class ToggleConfirmDescriptionDialogState (val state : Boolean) : ZoneInfoUiEvent()
+
+    data class SelectDescriptionToDelete (val description : String) : ZoneInfoUiEvent()
+
     data class AddMemeberByEmail(val email: String) : ZoneInfoUiEvent()
 
     data object ShowConfirmLeftDialog : ZoneInfoUiEvent()
@@ -97,6 +101,13 @@ sealed class ZoneInfoUiEvent {
 
     data class ToggleSelectionDeleteArticleMode(val state: Boolean) : ZoneInfoUiEvent()
 
+    data class ToggleDescriptionDialog (val state : Boolean) : ZoneInfoUiEvent()
+
+    data class SelectArticleDescription (val article : Article) : ZoneInfoUiEvent()
+
+    data object DeleteDescription  : ZoneInfoUiEvent()
+
+    data class UpdateDescription (val oldDescription : String, val newDescription : String) : ZoneInfoUiEvent()
 
     data object ClearArticleDeleteSelections : ZoneInfoUiEvent()
 

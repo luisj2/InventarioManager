@@ -8,6 +8,7 @@ import com.xluis.inventarioefa.data.Database.Firebase.Firestore.BaseFirestoreRep
 import com.xluis.inventarioefa.data.Model.Firestore.Article.ArticleFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_COUNT
+import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_DESCRIPTION_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_ARTICLE_SUBCOLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_COLLECTION
 import kotlinx.coroutines.channels.awaitClose
@@ -69,6 +70,37 @@ class ArticleZoneFirestoreRepository(
     ): SuspendResult<Boolean> {
         val refs = buildArticleReferencesList(zoneId, articleList)
         return insertListInBatch(refs)
+    }
+
+    override suspend fun updateArticleDescription(
+        zoneId: String,
+        articleId: String,
+        oldDescription: String,
+        newDescription: String
+    ): SuspendResult<Boolean> {
+        return executeFirestoreOperation {
+
+            val articleRef = getArticleDocumentRef(zoneId, articleId)
+
+            fs.runTransaction { transaction ->
+
+                val snapshot = transaction.get(articleRef)
+                val article = snapshot.toObject(ArticleFirestore::class.java)
+                    ?: return@runTransaction false
+
+                val updatedDescriptions = article.descriptions.map {
+                    if (it == oldDescription) newDescription else it
+                }
+
+                transaction.update(
+                    articleRef,
+                    FIRESTORE_ARTICLE_DESCRIPTION_FIELD,
+                    updatedDescriptions
+                )
+
+                true
+            }.await()
+        }
     }
 
     // ============================================================

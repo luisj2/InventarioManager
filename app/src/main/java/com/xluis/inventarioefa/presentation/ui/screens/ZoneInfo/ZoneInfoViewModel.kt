@@ -20,6 +20,7 @@ import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.InsertMovements
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveArticlesByIdList
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.SaveDatabaseChanges
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.UpdateArticleCount
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.UpdateDescription
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.ClearAllArticleAndMovementSelected
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.GetArticlesByScreenAndZoneIds
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.RemoveArticleSelectedListByIds
@@ -69,11 +70,12 @@ class ZoneInfoViewModel(
     private val updateArticleCount: UpdateArticleCount,
     private val getArticlesByScreenAndZoneIds: GetArticlesByScreenAndZoneIds,
     private val getMovementsByScreenAndZoneIds: GetMovementsByScreenAndZoneIds,
-    private val removeArticleSelectedListByIds : RemoveArticleSelectedListByIds,
-    private val clearAllArticleAndMovementSelected : ClearAllArticleAndMovementSelected,
-    private val removeArticlesAndMovementByArticleId : RemoveArticlesAndMovementByArticleId,
+    private val removeArticleSelectedListByIds: RemoveArticleSelectedListByIds,
+    private val clearAllArticleAndMovementSelected: ClearAllArticleAndMovementSelected,
+    private val removeArticlesAndMovementByArticleId: RemoveArticlesAndMovementByArticleId,
     private val getUserLoggedUsername: GetUserLoggedUsername,
-    private val changeZoneName: ChangeZoneName
+    private val changeZoneName: ChangeZoneName,
+    private val updateDescription: UpdateDescription
 ) : ViewModel() {
 
     private val _uiState = mutableStateOf(ZoneInfoUiState())
@@ -119,10 +121,11 @@ class ZoneInfoViewModel(
             ZoneInfoUiEvent.DissmissConfirmLeftDialog -> updateState { copy(showConfirmLeftDialog = false) }
             ZoneInfoUiEvent.ShowQuantityDialog -> updateState { copy(showQuantityDialog = true) }
             ZoneInfoUiEvent.DissmissQuantityDialog -> updateState { copy(showQuantityDialog = false) }
-            is ZoneInfoUiEvent.AddRemoveQuantity ->{
+            is ZoneInfoUiEvent.AddRemoveQuantity -> {
                 val delta = if (event.isAdd) event.quantity else -event.quantity
                 updateArticleQuantity(delta)
             }
+
             ZoneInfoUiEvent.InitToSaveListsFlows -> {
                 val state = _uiState.value
                 val screenId = state.screenId
@@ -132,7 +135,7 @@ class ZoneInfoViewModel(
                     showToast("No se han definido screenId o zoneId")
                     return
                 }
-                initFlows(screenId,zoneId)
+                initFlows(screenId, zoneId)
             }
 
             is ZoneInfoUiEvent.SelectArticle -> {
@@ -142,6 +145,16 @@ class ZoneInfoViewModel(
                     currentList.add(articleId)
                     updateState { copy(selectionArticleToRemove = currentList) }
                 }
+            }
+
+            is ZoneInfoUiEvent.ToggleConfirmDescriptionDialogState -> {
+                updateState { copy(showConfirmDeleteByDescriptionDialog = event.state) }
+            }
+
+            is ZoneInfoUiEvent.SelectDescriptionToDelete -> updateState {
+                copy(
+                    descriptionToDeleteSelected = event.description
+                )
             }
 
             ZoneInfoUiEvent.ShowDeleteArticleDialog -> {
@@ -219,6 +232,7 @@ class ZoneInfoViewModel(
             is ZoneInfoUiEvent.RemoveMember -> _uiState.value.zoneMemberToRemove?.let { member ->
                 removeMember(member.id)
             }
+
             ZoneInfoUiEvent.OpenSVGSelector -> {
                 openSVGSelectorCall()
             }
@@ -244,6 +258,7 @@ class ZoneInfoViewModel(
                     clearToSaveList()
                 }
             }
+
             is ZoneInfoUiEvent.RemoveArticleToSave -> {
                 val state = _uiState.value
                 if (!state.articlesToSaveList.map { it.id }.contains(event.articleId)) {
@@ -299,15 +314,24 @@ class ZoneInfoViewModel(
                 }
             }
 
-            is ZoneInfoUiEvent.UpdateArticleToModifyQuantity ->{
+            is ZoneInfoUiEvent.UpdateDescription -> {
+                updateDescriptionByOld(event.oldDescription, event.newDescription)
+            }
+
+            is ZoneInfoUiEvent.UpdateArticleToModifyQuantity -> {
                 updateState { copy(articleToModifyCountSelected = event.articleToModify) }
             }
 
-            is ZoneInfoUiEvent.ShowRemoveMemberDialog ->{
-                updateState { copy(showDeleteMemberDialog = true, zoneMemberToRemove = event.memberSelected) }
+            is ZoneInfoUiEvent.ShowRemoveMemberDialog -> {
+                updateState {
+                    copy(
+                        showDeleteMemberDialog = true,
+                        zoneMemberToRemove = event.memberSelected
+                    )
+                }
             }
 
-            ZoneInfoUiEvent.DissmissRemoveMemberDialog ->{
+            ZoneInfoUiEvent.DissmissRemoveMemberDialog -> {
                 updateState { copy(showConfirmLeftDialog = false, zoneMemberToRemove = null) }
             }
 
@@ -315,11 +339,106 @@ class ZoneInfoViewModel(
             ZoneInfoUiEvent.DismissZoneNameDialog -> updateState { copy(showChangeZoneNameDialog = false) }
             is ZoneInfoUiEvent.ChangeZoneName -> changeZoneNameByStorageType(event.newZoneName)
 
+            is ZoneInfoUiEvent.SelectArticleDescription -> {
+                updateState { copy(selectedArticleDescription = event.article) }
+            }
+
+            is ZoneInfoUiEvent.ToggleDescriptionDialog -> {
+                updateState { copy(showDescriptionDialog = event.state) }
+            }
+
+            ZoneInfoUiEvent.DeleteDescription -> {
+                deleteDescription()
+            }
+
             else -> {}
         }
     }
 
-    private fun changeZoneNameByStorageType(newZoneName : String) {
+    private fun updateDescriptionByOld(
+        oldDescription: String,
+        newDescription: String
+    ) {
+        val state = _uiState.value
+        val articleId = state.selectedArticleDescription?.id ?: return
+        val storageType = state.storageType
+        val zoneId = state.zone?.id ?: return
+
+        viewModelScope.launch {
+            updateDescription(
+                articleId = articleId,
+                zoneId = zoneId,
+                storageType = storageType,
+                oldDescription = oldDescription,
+                newDescription = newDescription
+            ).onSuccess {
+                showToast("Descripción actualizada")
+            }
+                .onError {
+                    showToast(it.message)
+                }
+        }
+    }
+
+    private fun deleteDescription() {
+        val state = _uiState.value
+        val description = state.descriptionToDeleteSelected
+        val article = state.selectedArticleDescription ?: return
+
+        val zoneId = state.zone?.id ?: return
+        val storageType = state.storageType
+
+        // 1. quitar descripción
+        val newDescriptions = article.descriptions.filter { it != description }
+
+        viewModelScope.launch {
+
+            // CASO 1: si count == 1 → eliminar artículo entero
+            if (article.count <= 1) {
+                removeArticlesByIdList(
+                    zoneId = zoneId,
+                    articleIdList = listOf(article.id),
+                    storageType = storageType
+                ).onSuccess {
+                    updateState {
+                        copy(
+                            articleList = articleList.filter { it.id != article.id },
+                            selectedArticleDescription = null,
+                            descriptionToDeleteSelected = null
+                        )
+                    }
+                    showToast("Artículo eliminado")
+                }.onError {
+                    showToast(it.message)
+                }
+
+                return@launch
+            }
+
+            // CASO 2: count > 1 → solo bajar count y quitar descripción
+            val updatedArticle = article.copy(
+                descriptions = newDescriptions,
+                count = article.count - 1
+            )
+
+            updateState {
+                copy(
+                    selectedArticleDescription = updatedArticle,
+                    articleList = articleList.map {
+                        if (it.id == article.id) updatedArticle else it
+                    }
+                )
+            }
+
+            updateArticleCount(
+                zoneId = zoneId,
+                storageType = storageType,
+                articleToUpdate = updatedArticle
+            )
+        }
+    }
+
+    private fun changeZoneNameByStorageType(newZoneName: String) {
         val state = _uiState.value
         val zoneId = state.zone?.id ?: run {
             showToast("No se ha encontrado la zona")
@@ -327,7 +446,7 @@ class ZoneInfoViewModel(
         }
         val storageType = state.storageType
 
-        if(storageType == StorageType.FIREBASE && zoneId == state.zone.ownerId){
+        if (storageType == StorageType.FIREBASE && zoneId == state.zone.ownerId) {
             showToast("No puedes cambiar el nombre de la zona sin ser el propietario")
             return
         }
@@ -415,13 +534,11 @@ class ZoneInfoViewModel(
 
 
     private fun clearArticleDeleteSelection() {
-        viewModelScope.launch {
-            val state = _uiState.value
-            val screenId = state.screenId ?: return@launch
-            val zoneId = state.zone?.id ?: return@launch
-            val articlesSelectedIds = state.selectionArticleToRemove
-            removeArticlesAndMovementByArticleId(articlesSelectedIds,screenId, zoneId)
-                .onSuccess { showToast("Se han eliminado los articulos correctamente") }
+        updateState {
+            copy(
+                selectionArticleToRemove = emptyList(),
+                selectionRemoveModeState = false
+            )
         }
     }
 
@@ -579,7 +696,9 @@ class ZoneInfoViewModel(
                 selectionArticleToRemove = emptyList(),
                 selectionRemoveModeState = false,
                 showDeleteArticlesDialog = false,
-                isLoading = false
+                isLoading = false,
+                articlesToSaveList = articlesToSaveList.filter { it.id !in articleIdListToRemove },
+                movementsToSaveList = movementsToSaveList.filter { it.articleId !in articleIdListToRemove }
             )
         }
 
@@ -595,7 +714,7 @@ class ZoneInfoViewModel(
             return
         }
 
-        when(val result = getArticlesByZoneId(zoneId, state.storageType)) {
+        when (val result = getArticlesByZoneId(zoneId, state.storageType)) {
 
             is SuspendResult.Success -> {
                 viewModelScope.launch {
@@ -642,12 +761,14 @@ class ZoneInfoViewModel(
                         updateZoneById(zoneId)
                         showToast("Miembro eliminado correctamente")
                     }
-                    .onError {error -> showToast(error.message) }
-            }finally {
-                updateState { copy(
-                    showDeleteMemberDialog = false,
-                    isLoading = false
-                ) }
+                    .onError { error -> showToast(error.message) }
+            } finally {
+                updateState {
+                    copy(
+                        showDeleteMemberDialog = false,
+                        isLoading = false
+                    )
+                }
             }
         }
     }
@@ -688,9 +809,9 @@ class ZoneInfoViewModel(
         parentId: String,
         storageType: StorageType
     ): List<ArticleMovement> {
-            return getMovementsByZoneId(parentId, storageType)
-                .catch { emit(emptyList()) }
-                .first()
+        return getMovementsByZoneId(parentId, storageType)
+            .catch { emit(emptyList()) }
+            .first()
     }
 
 
@@ -878,7 +999,7 @@ class ZoneInfoViewModel(
                             movementsToSaveList = listOf()
                         )
                     }
-                    if(zoneId != null) updateZoneById(zoneId)
+                    if (zoneId != null) updateZoneById(zoneId)
                     showToast("Se han actualizado los datos correctamente")
                 }
         }
@@ -919,9 +1040,9 @@ class ZoneInfoViewModel(
             val state = _uiState.value
             val zoneId = state.zone?.id ?: return@launch
             val screenId = state.screenId ?: return@launch
-            removeArticleSelectedListByIds(articleIdList,zoneId,screenId)
+            removeArticleSelectedListByIds(articleIdList, zoneId, screenId)
                 .onSuccess {
-                    initFlows(screenId,zoneId)
+                    initFlows(screenId, zoneId)
                 }
         }
     }
@@ -957,7 +1078,7 @@ class ZoneInfoViewModel(
     }
 
 
-    private suspend fun clearToSaveList(): SuspendResult<Boolean>{
+    private suspend fun clearToSaveList(): SuspendResult<Boolean> {
         val state = _uiState.value
         val screenId = state.screenId ?: return SuspendResult.Error("No hay screenId")
         val zoneId = state.zone?.id ?: return SuspendResult.Error("No hay zoneId")

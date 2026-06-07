@@ -10,6 +10,7 @@ fun Article.toZoneEntity(): ArticleZoneEntity {
         id = this.id.toLongOrNull() ?: 0,
         name = this.name,
         category = this.category.name,
+        descriptions = this.descriptions,
         zoneId = this.zoneId?.toLongOrNull() ?: 0,
         count = this.count
     )
@@ -21,6 +22,7 @@ fun ArticleZoneEntity.toDomain(): Article {
         id = this.id.toString(),
         name = this.name,
         category = ArticleCategory.valueOf(this.category),
+        descriptions = this.descriptions,
         count = this.count,
     )
 }

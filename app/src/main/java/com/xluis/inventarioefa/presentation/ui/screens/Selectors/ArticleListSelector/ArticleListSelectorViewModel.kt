@@ -249,10 +249,22 @@ class ArticleListSelectorViewModel(
                     }
                 }
             }
+
             val screenId = state.screenId
 
+            val descriptionsByArticleId =
+                state.descriptionGroups.associateBy { it.articleId }
+
             val articleSelectedList =
-                state.selectedArticleList.map { it.copy(zoneId = state.zoneId) }
+                state.selectedArticleList.map { article ->
+                    article.copy(
+                        zoneId = state.zoneId,
+                        descriptions = descriptionsByArticleId[article.id]
+                            ?.descriptions
+                            ?: emptyList()
+                    )
+                }
+
             val userName = when (_uiState.value.storageType) {
                 StorageType.LOCAL -> YOUR_MOVE_ROOM
                 StorageType.FIREBASE -> getUserLoggedUsername(userId).getOrNull() ?: "???"
@@ -270,8 +282,12 @@ class ArticleListSelectorViewModel(
             }
 
             addArtilesAndMovementSelected(
-                articleSelectedList = articleSelectedList.map { it.toSelectedEntity(screenId) },
-                movementSelectedList = movementSelected.map { it.toMovementSelectedEntity(screenId) }
+                articleSelectedList = articleSelectedList.map {
+                    it.toSelectedEntity(screenId)
+                },
+                movementSelectedList = movementSelected.map {
+                    it.toMovementSelectedEntity(screenId)
+                }
             )
                 .onSuccess { navigateBack() }
                 .onError { showToast(it.message) }

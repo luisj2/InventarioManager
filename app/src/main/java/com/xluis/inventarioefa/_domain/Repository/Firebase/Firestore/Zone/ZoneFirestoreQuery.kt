@@ -32,6 +32,13 @@ interface ZoneFirestoreQuery {
         movementList: List<ArticleMovementFirestore>
     ): SuspendResult<Boolean>
 
+    suspend fun updateArticleDescription(
+        zoneId: String,
+        articleId: String,
+        oldDescription : String,
+        newDescription : String
+    ): SuspendResult<Boolean>
+
     //Zones
 
     suspend fun changeZoneName (zoneId : String,newZoneName : String) : SuspendResult<Boolean>

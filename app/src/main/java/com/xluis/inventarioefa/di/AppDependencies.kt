@@ -48,6 +48,7 @@ import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveArticlesBy
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.RemoveZoneListCase
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.SaveDatabaseChanges
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.UpdateArticleCount
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.UpdateDescription
 import com.xluis.inventarioefa._domain.UseCases.Room.AddArtilesAndMovementSelected
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.CreateArticleCase
 import com.xluis.inventarioefa._domain.UseCases.Room.Article.GetAllArticles
@@ -383,6 +384,9 @@ object AppDependencies {
     val changeZoneName by lazy{
         ChangeZoneName(zoneFirestoreRepository, zoneRoomRepository)
     }
+    val updateDescription by lazy{
+        UpdateDescription(zoneRoomRepository,zoneFirestoreRepository)
+    }
 
     // Mapa de factories
     private val factories = mutableMapOf<KClass<out ViewModel>, ViewModelProvider.Factory>()
@@ -451,7 +455,8 @@ object AppDependencies {
                 clearAllArticleAndMovementSelected = clearAllArticleAndMovementSelected,
                 removeArticlesAndMovementByArticleId = removeArticlesAndMovementByArticleId,
                 getUserLoggedUsername = getUserLoggedUsername,
-                changeZoneName = changeZoneName
+                changeZoneName = changeZoneName,
+                updateDescription = updateDescription
             )
 
 

@@ -30,9 +30,13 @@ data class ZoneInfoUiState(
     val showConfirmLeftDialog : Boolean = false,
     val showDeleteArticlesDialog : Boolean = false,
     val showMoveDialog : Boolean = false,
+    val showDescriptionDialog : Boolean = false,
+    val selectedArticleDescription : Article? = null,
     val showDeleteMemberDialog : Boolean = false,
+    val showConfirmDeleteByDescriptionDialog : Boolean = false,
     val showChangeZoneNameDialog : Boolean = false,
     val showQuantityDialog : Boolean = false,
+    val descriptionToDeleteSelected : String? = null,
     val moveCount : Int  = 0,
     val isFabAddMovementsMenuOpen : Boolean = false,
     )

@@ -73,8 +73,10 @@ import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.AddMembe
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.AddRemoveQuantityDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ChangeZoneNameDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmDeleteDialog
+import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmDeleteDialogByDescription
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmDeleteMemberDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.ConfirmExitDialog
+import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.DescriptionListSection
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.Dialogs.MoveQuantityDialog
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.PageZoneItems.BaseZonePages
 import com.xluis.inventarioefa.presentation.ui.screens.ZoneInfo.PageZoneItems.ShareZonePages
@@ -116,8 +118,8 @@ fun ZoneInfoScreen(
         }
     }
 
-    LaunchedEffect(uiState.zone,uiState.screenId) {
-        if(uiState.screenId == null || uiState.zone?.id == null) return@LaunchedEffect
+    LaunchedEffect(uiState.zone, uiState.screenId) {
+        if (uiState.screenId == null || uiState.zone?.id == null) return@LaunchedEffect
         viewModel.onEvent(ZoneInfoUiEvent.InitToSaveListsFlows)
     }
 
@@ -165,12 +167,13 @@ fun ZoneInfoScreen(
                 ZoneInfoUiEffect.NavigateBackShowDialog -> {
                     backLogic()
                 }
+
                 else -> {}
             }
         }
     }
 
-    if(uiState.isLoading){
+    if (uiState.isLoading) {
         LoadingIndicator()
     }
 
@@ -229,8 +232,8 @@ private fun Dialogs(
         show = uiState.showQuantityDialog,
         maxCount = uiState.articleToModifyCountSelected?.count ?: 0,
         onDismiss = { onEvent(ZoneInfoUiEvent.DissmissQuantityDialog) },
-        onConfirm = {isAdd, quantity ->
-            onEvent(ZoneInfoUiEvent.AddRemoveQuantity(isAdd,quantity))
+        onConfirm = { isAdd, quantity ->
+            onEvent(ZoneInfoUiEvent.AddRemoveQuantity(isAdd, quantity))
             onEvent(ZoneInfoUiEvent.DissmissQuantityDialog)
         }
     )
@@ -245,7 +248,45 @@ private fun Dialogs(
     ChangeZoneNameDialog(
         show = uiState.showChangeZoneNameDialog,
         onDismiss = { onEvent(ZoneInfoUiEvent.DismissZoneNameDialog) },
-        onSaveClick = {newZoneName -> onEvent(ZoneInfoUiEvent.ChangeZoneName(newZoneName))}
+        onSaveClick = { newZoneName -> onEvent(ZoneInfoUiEvent.ChangeZoneName(newZoneName)) }
+    )
+
+    val article = uiState.selectedArticleDescription
+    val existing = article?.descriptions ?: emptyList()
+    val count = article?.count ?: 0
+
+    val descriptions = buildList {
+
+        addAll(existing)
+
+        repeat((count - existing.size).coerceAtLeast(0)) {
+            add("")
+        }
+    }
+    DescriptionListSection(
+        show = uiState.showDescriptionDialog,
+        onClose = {
+            onEvent(ZoneInfoUiEvent.ToggleDescriptionDialog(false))
+        },
+        descriptions = descriptions,
+        onDeleteDescription = { description ->
+            onEvent(ZoneInfoUiEvent.SelectDescriptionToDelete(description))
+            onEvent(ZoneInfoUiEvent.ToggleConfirmDescriptionDialogState(true))
+        },
+        onUpdateDescription = { old, new ->
+            onEvent(
+                ZoneInfoUiEvent.UpdateDescription(
+                    oldDescription = old,
+                    newDescription = new
+                )
+            )
+        }
+    )
+    ConfirmDeleteDialogByDescription(
+        show = uiState.showConfirmDeleteByDescriptionDialog,
+        articleDescription = uiState.descriptionToDeleteSelected ?: "Sin decripción",
+        onConfirm = { onEvent(ZoneInfoUiEvent.DeleteDescription) },
+        onDismiss = { onEvent(ZoneInfoUiEvent.ToggleConfirmDescriptionDialogState(false)) }
     )
 }
 
@@ -304,7 +345,7 @@ private fun ZoneInfoContent(
             } else {
                 ZoneInfoTopBar(
                     uiState = uiState,
-                    isSharedZone = uiState.zone?.ownerId == uiState.userId && uiState.storageType == StorageType.FIREBASE,
+                    isSharedZone = uiState.zone?.ownerId == uiState.userId || uiState.storageType == StorageType.FIREBASE,
                     isInArticlePage = pages[pagerState.currentPage] is BaseZonePages.Articles,
                     onShareZone = { onEvent(ZoneInfoUiEvent.ToggleShareDialogState(true)) },
                     onSaveZone = {
@@ -313,7 +354,7 @@ private fun ZoneInfoContent(
                     onToggleSelectionMode = {
                         onEvent(ZoneInfoUiEvent.ToggleSelectionDeleteArticleMode(true))
                     },
-                    onEditZoneName = {onEvent(ZoneInfoUiEvent.ShowZoneNameDialog)},
+                    onEditZoneName = { onEvent(ZoneInfoUiEvent.ShowZoneNameDialog) },
                     onBack = {
                         onEvent(ZoneInfoUiEvent.NavigateBackShowDialog)
                     }
@@ -326,7 +367,13 @@ private fun ZoneInfoContent(
                 FloatingActionButton(
                     onClick = { onEvent(ZoneInfoUiEvent.NavigateToArticleSelector) },
                     containerColor = MaterialTheme.colorScheme.primary
-                ) { Icon(Icons.Default.Add, contentDescription = "Seleccionar artículo", tint = Color.White) }
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Seleccionar artículo",
+                        tint = Color.White
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -352,7 +399,7 @@ private fun ZoneInfoContent(
                             },
                             onMoveArticle = { article ->
                                 onEvent(ZoneInfoUiEvent.SetMoveArticle(article))
-                                if(article.count == 1) onEvent(ZoneInfoUiEvent.MoveSelectedArticle)
+                                if (article.count == 1) onEvent(ZoneInfoUiEvent.MoveSelectedArticle)
                                 else onEvent(ZoneInfoUiEvent.ToggleShowMoveDialog(true))
                             },
                             onSelectArticle = { articleId ->
@@ -362,8 +409,16 @@ private fun ZoneInfoContent(
                                 onEvent(ZoneInfoUiEvent.DeselectArticle(articleId))
                             },
                             onModifyCountClick = { articleToModify ->
-                                onEvent(ZoneInfoUiEvent.UpdateArticleToModifyQuantity(articleToModify))
+                                onEvent(
+                                    ZoneInfoUiEvent.UpdateArticleToModifyQuantity(
+                                        articleToModify
+                                    )
+                                )
                                 onEvent(ZoneInfoUiEvent.ShowQuantityDialog)
+                            },
+                            showDescriptionDialog = {
+                                onEvent(ZoneInfoUiEvent.SelectArticleDescription(it))
+                                onEvent(ZoneInfoUiEvent.ToggleDescriptionDialog(true))
                             }
                         )
 
@@ -373,8 +428,15 @@ private fun ZoneInfoContent(
                             isOwner = uiState.userId == uiState.zone?.ownerId,
                             memberList = uiState.memberList,
                             owner = uiState.ownerMember,
-                            onDeleteMember = { member -> onEvent(ZoneInfoUiEvent.ShowRemoveMemberDialog(member)) }
+                            onDeleteMember = { member ->
+                                onEvent(
+                                    ZoneInfoUiEvent.ShowRemoveMemberDialog(
+                                        member
+                                    )
+                                )
+                            }
                         )
+
                         else -> Unit
                     }
                 }
@@ -429,7 +491,7 @@ private fun MemberListContent(
     owner: ZoneMember?,
     memberList: List<ZoneMember>,
     isOwner: Boolean,
-    onDeleteMember: (member : ZoneMember) -> Unit
+    onDeleteMember: (member: ZoneMember) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize()
@@ -536,8 +598,10 @@ fun ArticleEditableList(
     onMoveArticle: (article: Article) -> Unit,
     onSelectArticle: (articleId: String) -> Unit,
     onDeselectArticle: (articleId: String) -> Unit,
-    onModifyCountClick: (articleToModify: Article) -> Unit
+    onModifyCountClick: (articleToModify: Article) -> Unit,
+    showDescriptionDialog: (articleSelected: Article) -> Unit
 ) {
+
     val normalArticles = uiState.articleList
     val articlesToSave = uiState.articlesToSaveList
 
@@ -556,12 +620,17 @@ fun ArticleEditableList(
             )
         }
     } else {
-        // ✅ Mostrar lista de artículos
+
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+
+            // =========================
+            // ARTÍCULOS GUARDADOS
+            // =========================
             items(normalArticles) { article ->
+
                 val isSelected = selectedArticlesIdList.contains(article.id)
 
                 ArticleEditableItem(
@@ -569,16 +638,21 @@ fun ArticleEditableList(
                     isSelected = isSelected,
                     selectionRemoveModeState = selectionRemoveModeState,
                     canMove = true,
+                    isPersisted = true, // ✅ AQUÍ
                     onSelectArticle = {
                         if (!isSelected) onSelectArticle(article.id)
                         else onDeselectArticle(article.id)
                     },
                     onActivateActionMode = onActivateActionMode,
                     onMoveArticle = onMoveArticle,
-                    onModifyCountClick = { onModifyCountClick(article) }
+                    onModifyCountClick = { onModifyCountClick(article) },
+                    showDescriptionDialog = showDescriptionDialog
                 )
             }
 
+            // =========================
+            // HEADER
+            // =========================
             if (articlesToSave.isNotEmpty()) {
                 item {
                     Text(
@@ -590,24 +664,30 @@ fun ArticleEditableList(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                 }
+            }
 
-                items(articlesToSave) { article ->
-                    val isSelected = selectedArticlesIdList.contains(article.id)
+            // =========================
+            // ARTÍCULOS PENDIENTES
+            // =========================
+            items(articlesToSave) { article ->
 
-                    ArticleEditableItem(
-                        article = article,
-                        isSelected = isSelected,
-                        selectionRemoveModeState = selectionRemoveModeState,
-                        canMove = false,
-                        onSelectArticle = {
-                            if (!isSelected) onSelectArticle(article.id)
-                            else onDeselectArticle(article.id)
-                        },
-                        onActivateActionMode = onActivateActionMode,
-                        onMoveArticle = {},
-                        onModifyCountClick = { onModifyCountClick(article) }
-                    )
-                }
+                val isSelected = selectedArticlesIdList.contains(article.id)
+
+                ArticleEditableItem(
+                    article = article,
+                    isSelected = isSelected,
+                    selectionRemoveModeState = selectionRemoveModeState,
+                    canMove = false,
+                    isPersisted = false,
+                    onSelectArticle = {
+                        if (!isSelected) onSelectArticle(article.id)
+                        else onDeselectArticle(article.id)
+                    },
+                    onActivateActionMode = onActivateActionMode,
+                    onMoveArticle = {},
+                    onModifyCountClick = { onModifyCountClick(article) },
+                    showDescriptionDialog = showDescriptionDialog
+                )
             }
         }
     }
@@ -621,10 +701,12 @@ fun ArticleEditableItem(
     isSelected: Boolean,
     selectionRemoveModeState: Boolean,
     canMove: Boolean,
+    isPersisted: Boolean,
     onSelectArticle: () -> Unit,
     onActivateActionMode: (article: Article) -> Unit,
     onMoveArticle: (article: Article) -> Unit,
-    onModifyCountClick: () -> Unit
+    onModifyCountClick: () -> Unit,
+    showDescriptionDialog: (selectedArticle: Article) -> Unit
 ) {
 
     Card(
@@ -632,58 +714,65 @@ fun ArticleEditableItem(
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
             .combinedClickable(
-                onClick = { if (selectionRemoveModeState) onSelectArticle() },
-                onLongClick = { onActivateActionMode(article) }
+                onClick = {
+                    if (selectionRemoveModeState) onSelectArticle()
+                },
+                onLongClick = {
+                    onActivateActionMode(article)
+                }
             ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) Color(0xFFE3F2FD) else Color.White
         )
     ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalAlignment = Alignment.CenterVertically
         ) {
 
-            Column(modifier = Modifier.weight(1f)) {
+            // 🔹 INFORMACIÓN PRINCIPAL (ocupa todo el espacio disponible)
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
 
                 Text(
                     text = article.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.Black // Texto principal en negro
+                    color = Color.Black
                 )
 
                 Text(
                     text = "Categoría: ${article.category.displayName}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black // Color negro en vez de gris
+                    color = Color.Black
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+
                     Text(
                         text = "Cantidad:",
-                        color = Color.Black // Negro para etiqueta
+                        color = Color.Black
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
 
                     Text(
                         text = article.count.toString(),
                         color = Color.Black,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.width(90.dp)
+                        fontWeight = FontWeight.Bold
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Icono de editar en negro
-                    IconButton(onClick = onModifyCountClick) {
+                    // 🔹 BOTÓN EDITAR (siempre visible, sin colisiones de espacio)
+                    IconButton(
+                        onClick = onModifyCountClick,
+                        modifier = Modifier.size(40.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Modificar cantidad",
@@ -693,12 +782,25 @@ fun ArticleEditableItem(
                 }
             }
 
-            if (canMove) {
-                DefaultButton(
-                    contentText = "Mover",
-                    onClick = { onMoveArticle(article) },
-                    modifier = Modifier.padding(start = 16.dp)
-                )
+            // 🔹 ACCIONES A LA DERECHA (separadas del contenido principal)
+            Column(
+                horizontalAlignment = Alignment.End
+            ) {
+
+                if (canMove) {
+                    DefaultButton(
+                        contentText = "Mover",
+                        onClick = { onMoveArticle(article) }
+                    )
+                }
+
+                if (isPersisted && article.count > 0) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    DefaultButton(
+                        contentText = "Ver descripciones (${article.count})",
+                        onClick = { showDescriptionDialog(article) }
+                    )
+                }
             }
         }
     }
@@ -722,12 +824,12 @@ private fun MovementsContent(movementsList: List<ArticleMovement>) {
         }
         return
     }
-        MovementsList(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            movementsList = movementsList
-        )
+    MovementsList(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(8.dp),
+        movementsList = movementsList
+    )
 }
 
 @Composable
@@ -738,7 +840,7 @@ fun ZoneInfoTopBar(
     onBack: () -> Unit,
     onShareZone: () -> Unit,
     onSaveZone: () -> Unit,
-    onEditZoneName : () -> Unit,
+    onEditZoneName: () -> Unit,
     onToggleSelectionMode: () -> Unit,
 ) {
     Box(
@@ -807,11 +909,13 @@ fun ZoneInfoTopBar(
                 }
             }
 
-            // Botón de guardar (si hay datos para guardar)
-            if (uiState.articlesToSaveList.isNotEmpty() || uiState.movementsToSaveList.isNotEmpty()) {
+            val hasChanges =
+                uiState.articlesToSaveList.isNotEmpty()
+
+            if (hasChanges) {
                 IconButton(onClick = onSaveZone) {
                     Icon(
-                        Icons.Default.Save,
+                        imageVector = Icons.Default.Save,
                         contentDescription = "Guardar zona"
                     )
                 }
@@ -832,8 +936,6 @@ fun ZoneInfoTopBar(
 }
 
 
-
-
 @Composable
 fun ZoneBreadcrumbs(
     uiState: ZoneInfoUiState,
@@ -843,36 +945,36 @@ fun ZoneBreadcrumbs(
     val route = uiState.childZoneSummaryList
     if (zone == null || zone.parentIdList.isNullOrEmpty()) return
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            route.forEachIndexed { index, summary ->
-                Text(
-                    text = summary.name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF1565C0),
-                    modifier = Modifier
-                        .padding(horizontal = 4.dp)
-                        .clickable { onNavigateToZone(summary.id) }
-                )
-                Text(
-                    text = " < ",
-                    color = Color.DarkGray,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        route.forEachIndexed { index, summary ->
             Text(
-                text = zone.name,
+                text = summary.name,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                color = Color(0xFF1565C0),
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .clickable { onNavigateToZone(summary.id) }
+            )
+            Text(
+                text = " < ",
+                color = Color.DarkGray,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
+
+        Text(
+            text = zone.name,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Black,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
+    }
 }
 
 

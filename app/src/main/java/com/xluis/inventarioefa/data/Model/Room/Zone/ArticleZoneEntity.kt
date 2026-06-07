@@ -21,6 +21,7 @@ data class ArticleZoneEntity(
     val id: Long = 0,
     val name: String,
     val category: String,
+    val descriptions : List<String>,
     val zoneId: Long,
     val count: Int = 1
 )

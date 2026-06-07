@@ -82,6 +82,28 @@ class ZoneRoomRepository(
             zoneDao.updateZone(zone) > 0
         }
     }
+    suspend fun updateArticleDescription(
+        zoneId: Long,
+        articleId: Long,
+        oldDescription: String,
+        newDescription: String
+    ): SuspendResult<Boolean> {
+        return executeRoomOperation {
+
+            val article = articleZoneDao.getArticleFromZone(articleId, zoneId)
+                ?: return@executeRoomOperation false
+
+            val updatedDescriptions = article.descriptions.map {
+                if (it == oldDescription) newDescription else it
+            }
+
+            val updatedArticle = article.copy(
+                descriptions = updatedDescriptions
+            )
+
+            articleZoneDao.insertArticle(updatedArticle) > 0
+        }
+    }
 
     suspend fun changeZoneName(
         zoneId: Long,

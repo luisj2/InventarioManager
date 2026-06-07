@@ -9,5 +9,6 @@ data class ArticleEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
-    val category : String
+    val category : String,
+    val descriptions : List<String>
 )

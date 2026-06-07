@@ -47,6 +47,7 @@ const val FIRESTORE_MOVEMENTS_USERID_FIELD = "userId"
 
 //Firestore Article Fields
 const val FIRESTORE_ARTICLE_COUNT_FIELD = "count"
+const val FIRESTORE_ARTICLE_DESCRIPTION_FIELD = "descriptions"
 
 //Firestore Request Fields
 const val FIRESTORE_ZONEREQUEST_ZONEID_FIELD = "zoneId"

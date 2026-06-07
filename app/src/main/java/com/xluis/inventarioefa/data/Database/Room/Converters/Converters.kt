@@ -1,6 +1,8 @@
 package com.xluis.inventarioefa.data.Database.Room.Converters
 
 import androidx.room.TypeConverter
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -18,13 +20,18 @@ class Converters {
         return dateString?.let { LocalDateTime.parse(it, formatter) }
     }
 
-    @TypeConverter
-    fun fromList(value: List<String>?): String? =
-        value?.joinToString(",")
+    private val gson = Gson()
 
     @TypeConverter
-    fun toList(value: String?): List<String>? =
-        value?.split(",")
+    fun fromList(value: List<String>?): String {
+        return gson.toJson(value)
+    }
+
+    @TypeConverter
+    fun toList(value: String): List<String> {
+        val type = object : TypeToken<List<String>>() {}.type
+        return gson.fromJson(value, type) ?: emptyList()
+    }
 
     @TypeConverter
     fun fromLongList(value: List<Long>?): String? =

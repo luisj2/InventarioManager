@@ -5,6 +5,7 @@ import com.xluis.inventarioefa.data.Database.Firestore.Zone.ZoneFirestoreReposit
 import com.xluis.inventarioefa.data.Database.Room.Zone.ZoneRoomRepository
 import com.xluis.inventarioefa.data.Mapper.Article.toDomain
 import com.xluis.inventarioefa.data.Mapper.toDomain
+import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
@@ -63,12 +64,12 @@ class GetAllZoneList(
 
             // Room: solo zonas con id no nulo
             roomZones.forEach { zone ->
-                zone.id?.let { allZonesMap[it] = zone }
+                zone.id?.let { allZonesMap[it] = zone.copy(storageType = StorageType.LOCAL) }
             }
 
             // Firestore: solo zonas con id no nulo
             firestoreZones.forEach { zone ->
-                zone.id?.let { allZonesMap[it] = zone } // Firestore sobrescribe si hay duplicados
+                zone.id?.let { allZonesMap[it] = zone.copy(storageType = StorageType.FIREBASE) } // Firestore sobrescribe si hay duplicados
             }
 
             allZonesMap.values.toList()

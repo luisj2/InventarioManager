@@ -42,6 +42,18 @@ interface ArticleZoneDao {
 
 
     //UPDATE
+
+    @Query("""
+    UPDATE article
+    SET descriptions = :descriptions
+    WHERE id = :articleId AND zoneId = :zoneId
+""")
+    suspend fun updateArticleDescriptions(
+        articleId: Long,
+        zoneId: Long,
+        descriptions: List<String>
+    ): Int
+
     @Query("""
         UPDATE article
         SET count = count - :countToRemove

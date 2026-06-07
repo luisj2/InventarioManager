@@ -17,6 +17,7 @@ fun ArticleEntity.toDomain(): Article {
         name = this.name,
         zoneId = null,
         category = categoryEnum,
+        descriptions = this.descriptions,
         count = 1,
     )
 }
@@ -25,7 +26,8 @@ fun Article.toEntity(): ArticleEntity {
     return ArticleEntity(
         id = this.id.toLongOrNull() ?: 0,
         name = this.name,
-        category = this.category.displayName
+        category = this.category.displayName,
+        descriptions = this.descriptions
     )
 }
 
@@ -40,7 +42,8 @@ fun ArticleSelectedEntity.toDomain(): Article {
             ArticleCategory.OTHER
         },
         zoneId = this.zoneId.toString(),
-        count = this.count
+        count = this.count,
+        descriptions = this.descriptions
     )
 }
 
@@ -51,6 +54,7 @@ fun Article.toSelectedEntity(screenId: String): ArticleSelectedEntity {
         articleId = this.id,
         name = this.name,
         category = this.category.name,
+        descriptions = this.descriptions,
         zoneId = this.zoneId ?: "",
         count = this.count
     )

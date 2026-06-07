@@ -2,13 +2,13 @@ package com.xluis.inventarioefa.data.Mapper
 
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
 import com.xluis.inventarioefa.data.Mapper.Article.toDomain
+import com.xluis.inventarioefa.data.Model.Firestore.Zone.ZoneFirestore
+import com.xluis.inventarioefa.data.Model.Firestore.ZoneFullFirestore
 import com.xluis.inventarioefa.data.Model.Room.Relactions.ZoneWithArticlesAndMovements
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleMovementsEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
 import com.xluis.inventarioefa.data.Model.Room.Zone.ZoneEntity
-import com.xluis.inventarioefa.data.Model.Firestore.Zone.ZoneFirestore
 import com.xluis.inventarioefa.data.Model.ZoneEntitiesBundle
-import com.xluis.inventarioefa.data.Model.Firestore.ZoneFullFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Zone.StorageType
 
 // ============================================================
@@ -63,6 +63,7 @@ fun Zone.toArticleEntities(): List<ArticleZoneEntity> {
         ArticleZoneEntity(
             name = article.name,
             category = article.category.name,
+            descriptions = article.descriptions,
             zoneId = zoneId.toLongOrNull() ?: 0,
         )
     }

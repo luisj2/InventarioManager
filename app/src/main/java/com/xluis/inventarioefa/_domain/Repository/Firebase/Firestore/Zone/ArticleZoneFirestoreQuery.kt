@@ -17,6 +17,12 @@ interface ArticleZoneFirestoreQuery {
         articleList: List<ArticleFirestore>
     ): SuspendResult<Boolean>
 
+    suspend fun updateArticleDescription(
+        zoneId: String,
+        articleId: String,
+        oldDescription: String,
+        newDescription: String
+    ): SuspendResult<Boolean>
 
 
     // GET

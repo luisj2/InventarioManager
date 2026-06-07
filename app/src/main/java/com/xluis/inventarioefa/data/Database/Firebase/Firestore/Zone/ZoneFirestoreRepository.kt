@@ -20,6 +20,7 @@ import com.xluis.inventarioefa.data.Model.Firestore.ZoneFullFirestore
 import com.xluis.inventarioefa.domain.model.DataClass.Result.SuspendResult
 import com.xluis.inventarioefa.domain.model.Database.Firebase.Firestore.Zone.ZoneFirestoreQuery
 import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_COUNT_FIELD
+import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_DESCRIPTION_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_MOVEMENTS_ZONEID_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_USER_COLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_USER_REQUESTS_FIELD
@@ -212,9 +213,43 @@ class ZoneFirestoreRepository(
                     transaction.set(movementRef, movement)
                 }
 
-                // 🔹 Si algo falla, toda la transaction se revierte automáticamente
                 true
             }.await()
+        }
+    }
+
+    override suspend fun updateArticleDescription(
+        zoneId: String,
+        articleId: String,
+        oldDescription: String,
+        newDescription: String
+    ): SuspendResult<Boolean> {
+        return executeFirestoreOperation {
+
+            val articleRef = getArticleCollection(zoneId)
+                .document(articleId)
+
+            val snapshot = articleRef.get().await()
+
+            val article = snapshot.toObject(ArticleFirestore::class.java)
+                ?: throw IllegalStateException("Artículo no existe")
+
+            val currentList = article.descriptions.toMutableList()
+
+            val index = currentList.indexOfFirst { it == oldDescription }
+
+            if (index != -1) {
+                currentList[index] = newDescription
+            } else {
+                currentList.add(newDescription)
+            }
+
+            articleRef.update(
+                FIRESTORE_ARTICLE_DESCRIPTION_FIELD,
+                currentList
+            ).await()
+
+            true
         }
     }
 

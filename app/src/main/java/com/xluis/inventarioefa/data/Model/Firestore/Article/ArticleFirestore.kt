@@ -8,6 +8,7 @@ data class ArticleFirestore(
     val category : String = "",
     val zoneId : String? = null,
     var count : Int = 1,
+    val descriptions : List<String> = emptyList()
 ){
     init {
         if(id == null && name.isNotBlank()){

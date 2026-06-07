@@ -40,6 +40,13 @@ fun DescriptionsDialog(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
+                Text(
+                    text = "Las descripciones son opcionales. Puedes dejar campos vacíos si no necesitas añadir información.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -72,7 +79,7 @@ fun DescriptionsDialog(
                                         )
                                     },
                                     label = {
-                                        Text("Descripción ${descIndex + 1}")
+                                        Text("Descripción (opcional) ${descIndex + 1}")
                                     },
                                     modifier = Modifier
                                         .fillMaxWidth()

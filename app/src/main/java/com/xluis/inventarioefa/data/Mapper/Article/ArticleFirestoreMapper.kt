@@ -14,6 +14,7 @@ fun Article.toFirestore(): ArticleFirestore {
         name = this.name,
         category = this.category.name,
         zoneId = this.zoneId,
+        descriptions = this.descriptions,
         count = this.count,
     )
 }
@@ -27,6 +28,7 @@ fun ArticleFirestore.toDomain(): Article {
         name = this.name,
         category = ArticleCategory.valueOf(this.category),
         zoneId = this.zoneId,
+        descriptions = this.descriptions,
         count = this.count,
     )
 }

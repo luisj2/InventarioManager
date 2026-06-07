@@ -113,6 +113,29 @@ class ArticleZoneRoomRepository(private val dao: ArticleZoneDao) : BaseRoomRepos
         }
     }
 
+    suspend fun updateArticleDescription(
+        zoneId: Long,
+        articleId: Long,
+        oldDescription: String,
+        newDescription: String
+    ): SuspendResult<Boolean> {
+        return executeRoomOperation {
+
+            val article = dao.getArticleFromZone(articleId, zoneId)
+                ?: return@executeRoomOperation false
+
+            val updatedDescriptions = article.descriptions.map {
+                if (it == oldDescription) newDescription else it
+            }
+
+            dao.updateArticleDescriptions(
+                articleId = articleId,
+                zoneId = zoneId,
+                descriptions = updatedDescriptions
+            ) > 0
+        }
+    }
+
     suspend fun getArticleFromZone(
         articleId: Long,
         zoneId: Long
