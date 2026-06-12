@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import com.xluis.inventarioefa.data.Model.Room.Zone.ArticleZoneEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -43,6 +44,8 @@ interface ArticleZoneDao {
 
     //UPDATE
 
+    @Update
+    suspend fun updateArticle(article: ArticleZoneEntity): Int
     @Query("""
     UPDATE article
     SET descriptions = :descriptions
@@ -53,6 +56,8 @@ interface ArticleZoneDao {
         zoneId: Long,
         descriptions: List<String>
     ): Int
+
+
 
     @Query("""
         UPDATE article
@@ -95,8 +100,4 @@ interface ArticleZoneDao {
         zoneId: Long,
         newCount: Int
     ): Int
-
-
-
-
 }

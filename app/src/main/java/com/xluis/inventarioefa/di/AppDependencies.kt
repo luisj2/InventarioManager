@@ -22,6 +22,7 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.CreateZo
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetAllZoneListByUserId
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreZoneData
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetFirestoreZoneNameById
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetMembersFlow
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetUserZonesIds
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetZoneListByIdList
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.RemoveZoneMember
@@ -34,6 +35,7 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArti
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.RemoveFirestoreArticleList
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.ZoneArticles.SaveArticleListInZone
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.ChangeZoneName
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.DeleteArticleDescriptionList
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetAllUserMovements
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetAllZoneList
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetArticlesByZoneId
@@ -222,7 +224,7 @@ object AppDependencies {
     }
 
     val getUserZonesSummary by lazy {
-        GetUserZonesSummary(userZonesRepository, zoneFirestoreRepository, zoneRoomRepository)
+        GetUserZonesSummary( zoneFirestoreRepository)
     }
 
     val getFirestoreZoneNameById by lazy {
@@ -387,6 +389,13 @@ object AppDependencies {
     val updateDescription by lazy{
         UpdateDescription(zoneRoomRepository,zoneFirestoreRepository)
     }
+    val deleteArticleDescriptionList by lazy{
+        DeleteArticleDescriptionList(articleRoomRepository, articleFirestoreRepository)
+    }
+
+    val getMembersFlow by lazy{
+        GetMembersFlow(zoneFirestoreRepository)
+    }
 
     // Mapa de factories
     private val factories = mutableMapOf<KClass<out ViewModel>, ViewModelProvider.Factory>()
@@ -453,10 +462,11 @@ object AppDependencies {
                 getMovementsByScreenAndZoneIds = getMovementsByScreenAndZoneIds,
                 removeArticleSelectedListByIds = removeArticleSelectedListByIds,
                 clearAllArticleAndMovementSelected = clearAllArticleAndMovementSelected,
-                removeArticlesAndMovementByArticleId = removeArticlesAndMovementByArticleId,
                 getUserLoggedUsername = getUserLoggedUsername,
                 changeZoneName = changeZoneName,
-                updateDescription = updateDescription
+                updateDescription = updateDescription,
+                deleteArticleDescriptionList = deleteArticleDescriptionList,
+                getMembersFlow = getMembersFlow
             )
 
 

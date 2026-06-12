@@ -149,7 +149,7 @@ fun NavigationWrapper() {
                         )
                     )
                 },
-                updateZone = { zoneId, _ -> zoneInfoViewModel.updateZoneById(zoneId) },
+                updateZone = { zoneId, _ -> zoneInfoViewModel.observeZone(zoneId) },
                 viewModel = zoneInfoViewModel,
                 screenId = screen,
                 onNavigateBack = navigateBack

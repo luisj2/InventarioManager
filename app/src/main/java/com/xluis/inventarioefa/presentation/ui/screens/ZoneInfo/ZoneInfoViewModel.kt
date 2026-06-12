@@ -10,8 +10,10 @@ import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserI
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.GetUserNameById
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.GetUserLoggedUsername
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.User.UserZoneRequest.SendZoneUserRequest
+import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.GetMembersFlow
 import com.xluis.inventarioefa._domain.UseCases.Firebase.Firestore.Zone.RemoveZoneMember
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.ChangeZoneName
+import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.DeleteArticleDescriptionList
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetArticlesByZoneId
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetMovementsByZoneId
 import com.xluis.inventarioefa._domain.UseCases.FirebaseAndRoom.GetZoneById
@@ -25,12 +27,12 @@ import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.ClearAllArt
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.GetArticlesByScreenAndZoneIds
 import com.xluis.inventarioefa._domain.UseCases.Room.ArticleSelected.RemoveArticleSelectedListByIds
 import com.xluis.inventarioefa._domain.UseCases.Room.MovementSelected.GetMovementsByScreenAndZoneIds
-import com.xluis.inventarioefa._domain.UseCases.Room.RemoveArticlesAndMovementByArticleId
 import com.xluis.inventarioefa._domain.model.DataClass.ArticleMovement
 import com.xluis.inventarioefa._domain.model.DataClass.Articles.Article
 import com.xluis.inventarioefa._domain.model.DataClass.Zone.Zone
 import com.xluis.inventarioefa._domain.model.Zone.ZoneMember
 import com.xluis.inventarioefa._domain.model.Zone.ZoneSummary
+import com.xluis.inventarioefa._domain.util.flatMap
 import com.xluis.inventarioefa._domain.util.getOrNull
 import com.xluis.inventarioefa._domain.util.onError
 import com.xluis.inventarioefa._domain.util.onSuccess
@@ -72,10 +74,11 @@ class ZoneInfoViewModel(
     private val getMovementsByScreenAndZoneIds: GetMovementsByScreenAndZoneIds,
     private val removeArticleSelectedListByIds: RemoveArticleSelectedListByIds,
     private val clearAllArticleAndMovementSelected: ClearAllArticleAndMovementSelected,
-    private val removeArticlesAndMovementByArticleId: RemoveArticlesAndMovementByArticleId,
     private val getUserLoggedUsername: GetUserLoggedUsername,
     private val changeZoneName: ChangeZoneName,
-    private val updateDescription: UpdateDescription
+    private val updateDescription: UpdateDescription,
+    private val deleteArticleDescriptionList: DeleteArticleDescriptionList,
+    private val getMembersFlow: GetMembersFlow
 ) : ViewModel() {
 
     private val _uiState = mutableStateOf(ZoneInfoUiState())
@@ -86,6 +89,13 @@ class ZoneInfoViewModel(
 
     private var articlesCollectorJob: Job? = null
     private var movementsCollectorJob: Job? = null
+
+    private var zoneCollectorJob: Job? = null
+
+    private var initializedZoneData = false
+
+    private var membersCollectorJob: Job? = null
+
 
     private fun updateState(update: ZoneInfoUiState.() -> ZoneInfoUiState) {
         _uiState.value = _uiState.value.update()
@@ -108,7 +118,7 @@ class ZoneInfoViewModel(
 
     fun onEvent(event: ZoneInfoUiEvent) {
         when (event) {
-            is ZoneInfoUiEvent.UpdateZone -> updateZoneById(event.zoneId)
+            is ZoneInfoUiEvent.UpdateZone -> observeZone(event.zoneId)
             ZoneInfoUiEvent.NavigateToArticleSelector -> sendUiEffect(ZoneInfoUiEffect.NavigateToArticleSelector)
             is ZoneInfoUiEvent.NavigateToZone -> sendUiEffect(ZoneInfoUiEffect.NavigateToZone(event.zoneId))
             ZoneInfoUiEvent.NavigateToZoneSelector -> sendUiEffect(ZoneInfoUiEffect.NavigateToZoneSelector)
@@ -315,7 +325,19 @@ class ZoneInfoViewModel(
             }
 
             is ZoneInfoUiEvent.UpdateDescription -> {
-                updateDescriptionByOld(event.oldDescription, event.newDescription)
+                updateDescriptionByOld(event.oldDescription, event.newDescription) {
+                    updateState {
+                        val list = descriptionEditorList.toMutableList()
+
+                        val index = list.indexOf(event.oldDescription)
+
+                        if (index != -1) {
+                            list[index] = event.newDescription
+                        }
+
+                        copy(descriptionEditorList = list)
+                    }
+                }
             }
 
             is ZoneInfoUiEvent.UpdateArticleToModifyQuantity -> {
@@ -339,8 +361,19 @@ class ZoneInfoViewModel(
             ZoneInfoUiEvent.DismissZoneNameDialog -> updateState { copy(showChangeZoneNameDialog = false) }
             is ZoneInfoUiEvent.ChangeZoneName -> changeZoneNameByStorageType(event.newZoneName)
 
-            is ZoneInfoUiEvent.SelectArticleDescription -> {
-                updateState { copy(selectedArticleDescription = event.article) }
+            is ZoneInfoUiEvent.SelectArticleDescription -> updateState {
+                val article = event.article
+
+                copy(
+                    selectedArticleDescriptionId = article.id,
+                    selectedArticleDescription = article,
+                    descriptionEditorList = buildList {
+                        addAll(article.descriptions)
+                        repeat((article.count - article.descriptions.size).coerceAtLeast(0)) {
+                            add("")
+                        }
+                    }
+                )
             }
 
             is ZoneInfoUiEvent.ToggleDescriptionDialog -> {
@@ -357,7 +390,8 @@ class ZoneInfoViewModel(
 
     private fun updateDescriptionByOld(
         oldDescription: String,
-        newDescription: String
+        newDescription: String,
+        onSuccessAction: () -> Unit = {},
     ) {
         val state = _uiState.value
         val articleId = state.selectedArticleDescription?.id ?: return
@@ -372,6 +406,7 @@ class ZoneInfoViewModel(
                 oldDescription = oldDescription,
                 newDescription = newDescription
             ).onSuccess {
+                onSuccessAction()
                 showToast("Descripción actualizada")
             }
                 .onError {
@@ -380,33 +415,120 @@ class ZoneInfoViewModel(
         }
     }
 
+    fun observeZone(zoneId: String) {
+
+        zoneCollectorJob?.cancel()
+        membersCollectorJob?.cancel()
+        initializedZoneData = false
+
+        zoneCollectorJob = viewModelScope.launch {
+
+            getZoneById(
+                zoneId,
+                _uiState.value.storageType
+            ).collect { zone ->
+
+                updateState {
+                    copy(zone = zone)
+                }
+
+                if (!initializedZoneData) {
+                    initializedZoneData = true
+
+                    getArticleList()
+                    getMovementList()
+                }
+
+                updateZoneHierarchy(zone)
+
+                // 👥 MEMBERS FLOW (IDs)
+                if (
+                    zone.storageType == StorageType.FIREBASE &&
+                    zone.ownerId != null
+                ) {
+
+                    membersCollectorJob?.cancel()
+
+                    membersCollectorJob = viewModelScope.launch {
+
+                        getMembersFlow(zone.id ?: "")
+                            .catch { e ->
+                                showToast(e.message ?: "Error cargando miembros")
+                            }
+                            .collect { memberIds ->
+
+                                // 🔥 owner
+                                val ownerName = getUserNameById(zone.ownerId)
+                                    .getOrNull()
+                                    .orEmpty()
+
+                                val ownerMember = ZoneMember(
+                                    id = zone.ownerId,
+                                    name = ownerName
+                                )
+
+                                // 🔥 miembros (paralelo)
+                                val members = coroutineScope {
+                                    memberIds.map { id ->
+                                        async {
+                                            val name = getUserNameById(id)
+                                                .getOrNull()
+                                                .orEmpty()
+
+                                            ZoneMember(id, name)
+                                        }
+                                    }.awaitAll()
+                                }
+
+                                updateState {
+                                    copy(
+                                        ownerMember = ownerMember,
+                                        memberList = members
+                                    )
+                                }
+                            }
+                    }
+                }
+            }
+        }
+    }
+
     private fun deleteDescription() {
         val state = _uiState.value
-        val description = state.descriptionToDeleteSelected
-        val article = state.selectedArticleDescription ?: return
+        val description = state.descriptionToDeleteSelected ?: return
+
+        // 🔥 SIEMPRE fuente de verdad
+        val article = state.articleList.firstOrNull {
+            it.id == state.selectedArticleDescriptionId
+        } ?: return
 
         val zoneId = state.zone?.id ?: return
         val storageType = state.storageType
 
-        // 1. quitar descripción
-        val newDescriptions = article.descriptions.filter { it != description }
-
         viewModelScope.launch {
 
-            // CASO 1: si count == 1 → eliminar artículo entero
-            if (article.count <= 1) {
+            val isLastItem = article.count <= 1
+
+            // 🗑️ CASO 1: eliminar artículo completo
+            if (isLastItem) {
+
                 removeArticlesByIdList(
                     zoneId = zoneId,
                     articleIdList = listOf(article.id),
                     storageType = storageType
                 ).onSuccess {
+
                     updateState {
                         copy(
                             articleList = articleList.filter { it.id != article.id },
                             selectedArticleDescription = null,
-                            descriptionToDeleteSelected = null
+                            selectedArticleDescriptionId = null,
+                            descriptionToDeleteSelected = null,
+                            descriptionEditorList = emptyList(),
+                            showConfirmDeleteByDescriptionDialog = false
                         )
                     }
+
                     showToast("Artículo eliminado")
                 }.onError {
                     showToast(it.message)
@@ -415,29 +537,101 @@ class ZoneInfoViewModel(
                 return@launch
             }
 
-            // CASO 2: count > 1 → solo bajar count y quitar descripción
+            // 💡 CASO 2: "Sin Descripción"
+            if (description == "Sin Descripción") {
+
+                val updatedArticle = article.copy(
+                    count = (article.count - 1).coerceAtLeast(0)
+                )
+
+                updateArticleCount(
+                    zoneId = zoneId,
+                    storageType = storageType,
+                    articleToUpdate = updatedArticle
+                ).onSuccess {
+
+                    updateState {
+                        copy(
+                            selectedArticleDescription = updatedArticle,
+                            articleList = articleList.map {
+                                if (it.id == article.id) updatedArticle else it
+                            },
+                            descriptionToDeleteSelected = null,
+                            showConfirmDeleteByDescriptionDialog = false
+                        )
+                    }
+
+                    showToast("Unidad sin descripción eliminada")
+                }.onError {
+                    showToast(it.message)
+                }
+
+                return@launch
+            }
+
+            // ✏️ CASO 3: descripción normal (ELIMINAR SOLO 1 OCURRENCIA)
+            val index = article.descriptions.indexOfFirst { it == description }
+
+            if (index == -1) {
+                showToast("Descripción no encontrada")
+                return@launch
+            }
+
+            val newDescriptions = article.descriptions.toMutableList().apply {
+                removeAt(index)
+            }
+
             val updatedArticle = article.copy(
                 descriptions = newDescriptions,
-                count = article.count - 1
+                count = (article.count - 1).coerceAtLeast(0)
             )
-
-            updateState {
-                copy(
-                    selectedArticleDescription = updatedArticle,
-                    articleList = articleList.map {
-                        if (it.id == article.id) updatedArticle else it
-                    }
-                )
-            }
 
             updateArticleCount(
                 zoneId = zoneId,
                 storageType = storageType,
                 articleToUpdate = updatedArticle
             )
+                .flatMap {
+                    deleteArticleDescriptionList(
+                        zoneId = zoneId,
+                        articleId = article.id,
+                        descriptionsToRemove = listOf(description),
+                        storageType = storageType
+                    )
+                }
+                .onSuccess {
+
+                    updateState {
+                        copy(
+                            selectedArticleDescription = updatedArticle,
+                            articleList = articleList.map {
+                                if (it.id == article.id) updatedArticle else it
+                            },
+
+                            descriptionToDeleteSelected = null,
+                            showConfirmDeleteByDescriptionDialog = false,
+
+                            // 🔥 SIEMPRE RECONSTRUIR UI (source of truth)
+                            descriptionEditorList = buildList {
+                                addAll(updatedArticle.descriptions)
+
+                                val missing = (updatedArticle.count - updatedArticle.descriptions.size)
+                                    .coerceAtLeast(0)
+
+                                repeat(missing) {
+                                    add("")
+                                }
+                            }
+                        )
+                    }
+
+                    showToast("Descripción eliminada")
+                }
+                .onError {
+                    showToast(it.message)
+                }
         }
     }
-
     private fun changeZoneNameByStorageType(newZoneName: String) {
         val state = _uiState.value
         val zoneId = state.zone?.id ?: run {
@@ -457,7 +651,6 @@ class ZoneInfoViewModel(
                 changeZoneName(zoneId, newZoneName, storageType)
                     .onSuccess {
                         showToast("El nombre de la zona a cambiado correctamente")
-                        updateZoneById(zoneId)
                     }
                     .onError { error -> showToast(error.message) }
             } finally {
@@ -703,7 +896,7 @@ class ZoneInfoViewModel(
         }
 
         showToast("Se han eliminado los artículos correctamente")
-        _uiState.value.zone?.id?.let { updateZoneById(it) }
+
     }
 
 
@@ -758,7 +951,6 @@ class ZoneInfoViewModel(
             try {
                 removeZoneMember(zoneId, memberId)
                     .onSuccess {
-                        updateZoneById(zoneId)
                         showToast("Miembro eliminado correctamente")
                     }
                     .onError { error -> showToast(error.message) }
@@ -863,25 +1055,6 @@ class ZoneInfoViewModel(
     }
 
 
-    fun updateZoneById(zoneId: String) {
-        viewModelScope.launch {
-            updateState { copy(isLoading = true) }
-
-            val storageType = _uiState.value.storageType
-
-            getZoneById(zoneId, storageType)
-                .onSuccess { zone ->
-                    loadZoneData(
-                        zone,
-                        isFirebaseZone = storageType == StorageType.FIREBASE
-                    )
-                }
-                .onError { showToast(it.message) }
-
-            updateState { copy(isLoading = false) }
-        }
-    }
-
     private suspend fun loadZoneData(zone: Zone, isFirebaseZone: Boolean) {
         // 1️⃣ Actualizar la zona en el estado
         updateState { copy(zone = zone) }
@@ -929,9 +1102,39 @@ class ZoneInfoViewModel(
 
     }
 
+    private suspend fun updateZoneHierarchy(zone: Zone) {
+
+        val storageType = _uiState.value.storageType
+
+        // 🟢 PADRES
+        val parents = buildParentChain(zone)
+
+        // 🔵 ACTUAL
+        val current = ZoneSummary(
+            id = zone.id!!,
+            name = zone.name
+        )
+
+        // 🟡 HIJOS
+        val children = zone.childIdList.orEmpty().mapNotNull { childId ->
+            val name = getZoneNameById(childId, storageType)
+                .getOrNull()
+                .orEmpty()
+
+            ZoneSummary(childId, name)
+        }
+
+        updateState {
+            copy(
+                parentZoneSummaryList = parents,
+                currentZoneSummary = current,
+                childZoneSummaryList = children
+            )
+        }
+    }
+
 
     private suspend fun updateChildSummary(childIdList: List<String>) {
-        // Limpiamos primero
         updateState { copy(childZoneSummaryList = emptyList()) }
         if (childIdList.isEmpty()) return
 
@@ -947,6 +1150,31 @@ class ZoneInfoViewModel(
 
         updateState { copy(childZoneSummaryList = childSummaryList) }
     }
+    private suspend fun buildParentChain(zone: Zone): List<ZoneSummary> {
+
+        val storageType = _uiState.value.storageType
+        val result = mutableListOf<ZoneSummary>()
+
+        var currentParentId = zone.parentIdList?.firstOrNull()
+
+        while (currentParentId != null) {
+
+            val parentZone = getZoneById(currentParentId, storageType)
+                .first()
+
+            result.add(
+                ZoneSummary(
+                    id = parentZone.id!!,
+                    name = parentZone.name
+                )
+            )
+
+            currentParentId = parentZone.parentIdList?.firstOrNull()
+        }
+
+        return result.reversed()
+    }
+
 
 
     private fun saveChanges() {
@@ -973,7 +1201,6 @@ class ZoneInfoViewModel(
                                 movementsToSaveList = emptyList()
                             )
                         }
-                        updateZoneById(zoneId)
                         showToast("Se han actualizado los datos correctamente")
                     }.onError { error ->
                         showToast("No se pudieron limpiar los datos: ${error.message}")
@@ -999,7 +1226,6 @@ class ZoneInfoViewModel(
                             movementsToSaveList = listOf()
                         )
                     }
-                    if (zoneId != null) updateZoneById(zoneId)
                     showToast("Se han actualizado los datos correctamente")
                 }
         }

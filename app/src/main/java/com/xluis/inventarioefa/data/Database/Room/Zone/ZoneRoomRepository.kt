@@ -47,6 +47,9 @@ class ZoneRoomRepository(
         }
     }
 
+    fun getZoneFullFlow(zoneId: Long): Flow<ZoneWithArticlesAndMovements?> =
+        zoneDao.getZoneFullFlow(zoneId)
+
     suspend fun getZoneById(zoneId: Long): SuspendResult<ZoneEntity?> {
         return executeRoomOperation {
             zoneDao.getZoneById(zoneId)
@@ -73,6 +76,45 @@ class ZoneRoomRepository(
 
     suspend fun removeZone(zoneId: Long): SuspendResult<Boolean> {
         return executeRoomOperation {
+
+            // 1. Obtener zona
+            val zone = zoneDao.getZoneById(zoneId)
+                ?: return@executeRoomOperation false
+
+            val childIds = zone.childIdList ?: emptyList()
+            val parentIds = zone.parentIdList ?: emptyList()
+
+            // 2. Quitar esta zona de los HIJOS (parent list)
+            childIds.forEach { childId ->
+                val child = zoneDao.getZoneById(childId)
+
+                if (child != null) {
+                    val updatedParents = child.parentIdList
+                        ?.toMutableList()
+                        ?: mutableListOf()
+
+                    updatedParents.remove(zoneId)
+
+                    zoneDao.updateParentList(childId, updatedParents)
+                }
+            }
+
+            // 3. Quitar esta zona de los PADRES (child list)
+            parentIds.forEach { parentId ->
+                val parent = zoneDao.getZoneById(parentId)
+
+                if (parent != null) {
+                    val updatedChildren = parent.childIdList
+                        ?.toMutableList()
+                        ?: mutableListOf()
+
+                    updatedChildren.remove(zoneId)
+
+                    zoneDao.updateChildList(parentId, updatedChildren)
+                }
+            }
+
+            // 4. borrar zona
             zoneDao.removeZone(zoneId) > 0
         }
     }
@@ -93,15 +135,22 @@ class ZoneRoomRepository(
             val article = articleZoneDao.getArticleFromZone(articleId, zoneId)
                 ?: return@executeRoomOperation false
 
-            val updatedDescriptions = article.descriptions.map {
-                if (it == oldDescription) newDescription else it
+            val updatedDescriptions = article.descriptions.toMutableList()
+
+            val index = updatedDescriptions.indexOf(oldDescription)
+
+            if (index != -1) {
+                updatedDescriptions[index] = newDescription
+            } else {
+                // Crear una nueva
+                updatedDescriptions.add(newDescription)
             }
 
             val updatedArticle = article.copy(
                 descriptions = updatedDescriptions
             )
 
-            articleZoneDao.insertArticle(updatedArticle) > 0
+            articleZoneDao.updateArticle(updatedArticle) > 0
         }
     }
 

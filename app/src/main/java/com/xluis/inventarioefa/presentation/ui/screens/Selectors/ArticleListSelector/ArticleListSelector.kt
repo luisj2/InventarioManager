@@ -44,7 +44,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.xluis.inventarioefa._domain.model.Enums.SortType
 import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.AddArticleDialog
-import com.xluis.inventarioefa.presentation.ui.screens.Selectors.ArticleListSelector.Dialogs.DescriptionsDialog
 import com.xluis.inventarioefa.utils.ArticleItem
 import com.xluis.inventarioefa.utils.DefaultDropDownSelector
 import com.xluis.inventarioefa.utils.LoadingIndicator
@@ -118,7 +117,7 @@ private fun ArticleSelectorContent(
             FloatingActionButton(
                 onClick = {
                     if (selectedArticles.isNotEmpty()) {
-                        onEvent(ArticleListSelectorUiEvent.ToggleDescritionDialog(true))
+                        onEvent(ArticleListSelectorUiEvent.SaveSelectedArticles)
                     } else {
                         showToast("Añade algún artículo")
                     }
@@ -235,30 +234,6 @@ private fun Dialogs(
         showDialog = uiState.createArticleDialogState,
         onDismiss = { onEvent(ArticleListSelectorUiEvent.ToggleCreateArticleDialog(false)) },
         onAddArticle = { article -> onEvent(ArticleListSelectorUiEvent.AddArticle(article)) }
-    )
-    DescriptionsDialog(
-        showDialog = uiState.showDescriptionDialog,
-        groups = uiState.descriptionGroups,
-        onDismiss = {
-            onEvent(
-                ArticleListSelectorUiEvent.ToggleDescritionDialog(false)
-            )
-        },
-        onDescriptionChange = { groupIndex, descIndex, value ->
-
-            onEvent(
-                ArticleListSelectorUiEvent.UpdateArticleDescription(
-                    groupIndex = groupIndex,
-                    descIndex = descIndex,
-                    description = value
-                )
-            )
-        },
-        onConfirm = {
-            onEvent(
-                ArticleListSelectorUiEvent.SaveSelectedArticles
-            )
-        }
     )
 }
 

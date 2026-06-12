@@ -23,13 +23,13 @@ import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_COUNT_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ARTICLE_DESCRIPTION_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_MOVEMENTS_ZONEID_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_USER_COLLECTION
+import com.xluis.inventarioefa.utils.FIRESTORE_USER_EMAIL_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_USER_REQUESTS_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_USER_ZONES_LIST_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_ARTICLE_SUBCOLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_COLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONES_MOVEMENTS_SUBCOLLECTION
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_CHILD_LIST_FIELD_FIRESTORE
-import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_MEMBERS_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_MEMEBERS_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_NAME_FIELD
 import com.xluis.inventarioefa.utils.FIRESTORE_ZONE_OWNER_FIELD
@@ -190,26 +190,43 @@ class ZoneFirestoreRepository(
         articleList: List<ArticleFirestore>,
         movementList: List<ArticleMovementFirestore>
     ): SuspendResult<Boolean> {
+
         return executeFirestoreOperation {
+
+            val safeArticles = articleList.filter { !it.id.isNullOrBlank() }
+
             fs.runTransaction { transaction ->
 
-                // 🔹 Artículos
-                articleList.forEach { article ->
-                    val articleRef = getArticleCollection(zoneId).document(article.id ?: "")
-                    val snapshot = transaction.get(articleRef)
-                    val existingArticle = snapshot.toObject(ArticleFirestore::class.java)
+                // =========================
+                // 🔹 1. READ PHASE (TODOS LOS GETS PRIMERO)
+                // =========================
+                val snapshots = safeArticles.associateWith { article ->
+                    val ref = getArticleCollection(zoneId).document(article.id!!)
+                    transaction.get(ref)
+                }
 
-                    if (existingArticle == null) {
-                        transaction.set(articleRef, article)
+                // =========================
+                // 🔹 2. WRITE PHASE (DESPUÉS DE TODOS LOS READS)
+                // =========================
+                safeArticles.forEach { article ->
+
+                    val ref = getArticleCollection(zoneId).document(article.id!!)
+                    val snapshot = snapshots[article]!!
+                    val existing = snapshot.toObject(ArticleFirestore::class.java)
+
+                    if (existing == null) {
+                        transaction.set(ref, article)
                     } else {
-                        val newCount = (existingArticle.count ?: 0) + (article.count ?: 0)
-                        transaction.update(articleRef, FIRESTORE_ARTICLE_COUNT_FIELD, newCount)
+                        val newCount = (existing.count ?: 0) + (article.count ?: 0)
+                        transaction.update(ref, "count", newCount)
                     }
                 }
 
-                // 🔹 Movimientos
+                // 🔹 Movimientos (solo writes → OK aquí)
                 movementList.forEach { movement ->
-                    val movementRef = getMovementsCollection(zoneId).document(movement.id ?: "")
+                    val movementRef = getMovementsCollection(zoneId)
+                        .document(movement.id ?: return@forEach)
+
                     transaction.set(movementRef, movement)
                 }
 
@@ -226,30 +243,34 @@ class ZoneFirestoreRepository(
     ): SuspendResult<Boolean> {
         return executeFirestoreOperation {
 
-            val articleRef = getArticleCollection(zoneId)
-                .document(articleId)
+            val articleRef = getArticleCollection(zoneId).document(articleId)
 
-            val snapshot = articleRef.get().await()
+            fs.runTransaction { transaction ->
 
-            val article = snapshot.toObject(ArticleFirestore::class.java)
-                ?: throw IllegalStateException("Artículo no existe")
+                val snapshot = transaction.get(articleRef)
 
-            val currentList = article.descriptions.toMutableList()
+                val article = snapshot.toObject(ArticleFirestore::class.java)
+                    ?: throw Exception("Artículo no existe")
 
-            val index = currentList.indexOfFirst { it == oldDescription }
+                val updatedDescriptions = article.descriptions.toMutableList()
 
-            if (index != -1) {
-                currentList[index] = newDescription
-            } else {
-                currentList.add(newDescription)
-            }
+                val index = updatedDescriptions.indexOf(oldDescription)
 
-            articleRef.update(
-                FIRESTORE_ARTICLE_DESCRIPTION_FIELD,
-                currentList
-            ).await()
+                if (index == -1) {
+                    updatedDescriptions.add(newDescription)
+                } else {
+                    updatedDescriptions[index] = newDescription
+                }
 
-            true
+                transaction.update(
+                    articleRef,
+                    mapOf(
+                        "descriptions" to updatedDescriptions
+                    )
+                )
+
+                true
+            }.await()
         }
     }
 
@@ -486,6 +507,45 @@ class ZoneFirestoreRepository(
         }
     }
 
+    override suspend fun deleteArticleDescription(
+        zoneId: String,
+        articleId: String,
+        descriptionsToDelete: List<String>
+    ): SuspendResult<Boolean> {
+        return executeFirestoreOperation {
+
+            val articleRef = getArticleCollection(zoneId)
+                .document(articleId)
+
+            val snapshot = articleRef.get().await()
+
+            val article = snapshot.toObject(ArticleFirestore::class.java)
+                ?: throw IllegalStateException("Artículo no existe")
+
+            val currentDescriptions = article.descriptions.toMutableList()
+
+            currentDescriptions.removeAll(descriptionsToDelete.toSet())
+
+            val removedCount =
+                article.descriptions.size - currentDescriptions.size
+
+            val newCount = (article.count ?: 0) - removedCount
+
+            if (newCount <= 0) {
+                articleRef.delete().await()
+            } else {
+                articleRef.update(
+                    mapOf(
+                        FIRESTORE_ARTICLE_DESCRIPTION_FIELD to currentDescriptions,
+                        FIRESTORE_ARTICLE_COUNT_FIELD to newCount
+                    )
+                ).await()
+            }
+
+            true
+        }
+    }
+
 
     override fun getUserZonesFlow(userId: String): Flow<List<ZoneFirestore>> = callbackFlow {
 
@@ -600,22 +660,38 @@ class ZoneFirestoreRepository(
 
     /** Recupera las zonas explícitas de la lista del usuario */
     private suspend fun getUserExplicitZones(userId: String): List<ZoneSummary> {
-        val userDoc = getUserCollection()
-            .document(userId)
+
+        val userSnapshot = getUserCollection()
+            .whereEqualTo(FIRESTORE_USER_EMAIL_FIELD, userId)
             .get()
             .await()
 
-        val userZoneIds =
-            userDoc.get(FIRESTORE_USER_ZONES_LIST_FIELD) as? List<String> ?: emptyList()
+        val userDoc = userSnapshot.documents.firstOrNull()
+            ?: return emptyList()
+
+        val userZoneIds = userDoc
+            .get(FIRESTORE_USER_ZONES_LIST_FIELD)
+            ?.let { it as? List<*> }
+            ?.mapNotNull { it as? String }
+            ?: emptyList()
 
         return userZoneIds.mapNotNull { zoneId ->
-            getZoneCollection()
+
+            val zoneDoc = getZoneCollection()
                 .document(zoneId)
                 .get()
                 .await()
+
+            val zone = zoneDoc
                 .toObject(ZoneFirestore::class.java)
                 ?.toDomain()
-                ?.let { zone -> ZoneSummary(id = zone.id!!, name = zone.name) }
+
+            zone?.let {
+                ZoneSummary(
+                    id = it.id ?: zoneId,
+                    name = it.name
+                )
+            }
         }
     }
 
@@ -623,16 +699,37 @@ class ZoneFirestoreRepository(
 
 
     /** Recupera todas las zonas donde el usuario es miembro */
-    private suspend fun getMemberZones(userId: String): List<ZoneSummary> {
+    private suspend fun getMemberZones(email: String): List<ZoneSummary> {
+
+        // 1. Buscar usuario por email
+        val userSnapshot = getUserCollection()
+            .whereEqualTo(FIRESTORE_USER_EMAIL_FIELD, email)
+            .get()
+            .await()
+
+        val userDoc = userSnapshot.documents.firstOrNull()
+            ?: return emptyList()
+
+        val userId = userDoc.id
+
+        // 2. Buscar zonas donde es miembro
         val memberZonesQuery = getZoneCollection()
             .whereArrayContains(FIRESTORE_ZONE_MEMEBERS_FIELD, userId)
             .get()
             .await()
 
+        // 3. Mapear resultado
         return memberZonesQuery.documents.mapNotNull { doc ->
-            doc.toObject(ZoneFirestore::class.java)
+
+            val zone = doc.toObject(ZoneFirestore::class.java)
                 ?.toDomain()
-                ?.let { zone -> ZoneSummary(id = zone.id!!, name = zone.name) }
+
+            zone?.let {
+                ZoneSummary(
+                    id = it.id ?: doc.id,
+                    name = it.name
+                )
+            }
         }
     }
 
@@ -741,7 +838,6 @@ class ZoneFirestoreRepository(
 
         // 🔹 Escucha las zonas donde el usuario es miembro
         val memberListener = getZoneCollection()
-            .whereArrayContains(FIRESTORE_ZONE_MEMBERS_FIELD, userId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
 
@@ -818,6 +914,56 @@ class ZoneFirestoreRepository(
         }
     }
 
+    override fun getMembersFlow(zoneId: String): Flow<List<String>> = callbackFlow {
+
+        val zoneRef = getZoneDocumentRef(zoneId)
+
+        val listener = zoneRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+
+            val members = snapshot
+                ?.get(FIRESTORE_ZONE_MEMEBERS_FIELD) as? List<String>
+                ?: emptyList()
+
+            trySend(members)
+        }
+
+        awaitClose { listener.remove() }
+    }
+
+
+    override fun getFullZoneByIdFlow(zoneId: String): Flow<ZoneFullFirestore> = callbackFlow {
+
+        val listener = getZoneCollection()
+            .document(zoneId)
+            .addSnapshotListener { snapshot, error ->
+
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot == null || !snapshot.exists()) return@addSnapshotListener
+
+                val zone = snapshot.toObject(ZoneFirestore::class.java)
+
+                    ?: return@addSnapshotListener
+
+                // aquí tendrías que cargar artículos/movimientos también
+                trySend(
+                    ZoneFullFirestore(
+                        zone = zone,
+                        articleList = emptyList(),
+                        movementList = emptyList()
+                    )
+                )
+            }
+
+        awaitClose { listener.remove() }
+    }
 
     /** 🔹 Función auxiliar para obtener artículos de una zona */
     private suspend fun getArticlesByZoneId(zoneId: String): List<ArticleFirestore> {
@@ -904,34 +1050,93 @@ class ZoneFirestoreRepository(
     ): SuspendResult<Boolean> = executeBatchOperation { batch ->
 
         val zoneRef = getZoneDocumentRef(zoneId)
+        val zoneSnapshot = zoneRef.get().await()
 
-        val zoneSnapshot = try {
-            zoneRef.get().await()
-        } catch (e: Exception) {
-            throw Exception("No se pudo obtener la zona: ${e.message}")
-        } ?: throw Exception("Zona no encontrada")
+        if (!zoneSnapshot.exists()) {
+            throw Exception("Zona no encontrada")
+        }
 
-        // Obtener ownerId
-        val ownerId = zoneSnapshot.getString("ownerId")
+        val zone = zoneSnapshot.toObject(ZoneFirestore::class.java)
+            ?: throw Exception("Error al mapear zona")
+
+        val ownerId = zone.ownerId
             ?: throw Exception("No se encontró el owner de la zona")
 
-        // Referencia del usuario que intenta eliminar
-        val userRef = fs.collection(FIRESTORE_USER_COLLECTION).document(userId)
+        val userRef = fs.collection(FIRESTORE_USER_COLLECTION)
+            .document(userId)
+
+        val childIds = zone.childIdList ?: emptyList()
+        val parentIds = zone.parentIdList ?: emptyList()
+        val members = zone.membersId ?: emptyList()
+
+        // =========================================================
+        // 🔥 1. LIMPIEZA DE RELACIONES (TU IDEA)
+        // =========================================================
+
+        // 🔹 quitar de los HIJOS (parent list)
+        childIds.forEach { childId ->
+            val childRef = getZoneDocumentRef(childId)
+
+            batch.update(
+                childRef,
+                FIRESTORE_ZONE_PARENT_LIST_FIELD,
+                FieldValue.arrayRemove(zoneId)
+            )
+        }
+
+        // 🔹 quitar de los PADRES (child list)
+        parentIds.forEach { parentId ->
+            val parentRef = getZoneDocumentRef(parentId)
+
+            batch.update(
+                parentRef,
+                FIRESTORE_ZONE_CHILD_LIST_FIELD_FIRESTORE,
+                FieldValue.arrayRemove(zoneId)
+            )
+        }
+
+        // =========================================================
+        // 🔥 2. LÓGICA DE USUARIOS (TU CÓDIGO)
+        // =========================================================
 
         if (userId == ownerId) {
-            // 🔹 Si es owner: eliminar la zona completa
-            batch.delete(zoneRef)
 
-            // Quitar la zona de todos los miembros
-            val members = zoneSnapshot.get("members") as? List<String> ?: emptyList()
+            // 🔹 quitar zona de todos los miembros
             members.forEach { memberId ->
-                val memberRef = fs.collection(FIRESTORE_USER_COLLECTION).document(memberId)
-                batch.update(memberRef, FIRESTORE_USER_ZONES_LIST_FIELD, FieldValue.arrayRemove(zoneId))
+                val memberRef = fs.collection(FIRESTORE_USER_COLLECTION)
+                    .document(memberId)
+
+                batch.update(
+                    memberRef,
+                    FIRESTORE_USER_ZONES_LIST_FIELD,
+                    FieldValue.arrayRemove(zoneId)
+                )
             }
 
+            // 🔹 quitar zona del owner
+            batch.update(
+                userRef,
+                FIRESTORE_USER_ZONES_LIST_FIELD,
+                FieldValue.arrayRemove(zoneId)
+            )
+
+            // 🔹 borrar zona
+            batch.delete(zoneRef)
+
         } else {
-            // 🔹 Si es miembro: solo quitar esta zona de su lista
-            batch.update(userRef, FIRESTORE_USER_ZONES_LIST_FIELD, FieldValue.arrayRemove(zoneId))
+
+            // 🔹 usuario normal sale de la zona
+            batch.update(
+                userRef,
+                FIRESTORE_USER_ZONES_LIST_FIELD,
+                FieldValue.arrayRemove(zoneId)
+            )
+
+            batch.update(
+                zoneRef,
+                FIRESTORE_ZONE_MEMEBERS_FIELD,
+                FieldValue.arrayRemove(userId)
+            )
         }
     }
 

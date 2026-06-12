@@ -38,7 +38,7 @@ const val FIRESTORE_ZONE_MEMEBERS_FIELD = "membersId"
 const val FIRESTORE_ZONE_OWNER_FIELD = "ownerId"
 const val FIRESTORE_ZONE_PARENT_LIST_FIELD = "parentIdList"
 const val FIRESTORE_ZONE_NAME_FIELD = "name"
-const val FIRESTORE_ZONE_MEMBERS_FIELD = "members"
+const val C = "members"
 
 
 //Firestore Movements Fields

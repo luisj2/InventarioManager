@@ -251,24 +251,12 @@ private fun Dialogs(
         onSaveClick = { newZoneName -> onEvent(ZoneInfoUiEvent.ChangeZoneName(newZoneName)) }
     )
 
-    val article = uiState.selectedArticleDescription
-    val existing = article?.descriptions ?: emptyList()
-    val count = article?.count ?: 0
-
-    val descriptions = buildList {
-
-        addAll(existing)
-
-        repeat((count - existing.size).coerceAtLeast(0)) {
-            add("")
-        }
-    }
     DescriptionListSection(
         show = uiState.showDescriptionDialog,
         onClose = {
             onEvent(ZoneInfoUiEvent.ToggleDescriptionDialog(false))
         },
-        descriptions = descriptions,
+        descriptions = uiState.descriptionEditorList,
         onDeleteDescription = { description ->
             onEvent(ZoneInfoUiEvent.SelectDescriptionToDelete(description))
             onEvent(ZoneInfoUiEvent.ToggleConfirmDescriptionDialogState(true))
@@ -459,7 +447,6 @@ fun ZoneInfoSelectionTopBar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
 
-        // Botón para salir
         IconButton(onClick = onExitSelection) {
             Icon(
                 imageVector = Icons.Default.Close,
@@ -474,7 +461,6 @@ fun ZoneInfoSelectionTopBar(
             style = MaterialTheme.typography.titleMedium
         )
 
-        // Botón para borrar
         IconButton(onClick = onDeleteSelected) {
             Icon(
                 imageVector = Icons.Default.Delete,
@@ -496,7 +482,6 @@ private fun MemberListContent(
     LazyColumn(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Mostrar propietario primero
         owner?.let {
             item {
                 Box(modifier = Modifier.fillMaxWidth()) {
@@ -511,7 +496,6 @@ private fun MemberListContent(
             }
         }
 
-        // Encabezado "Miembros"
         if (memberList.isNotEmpty()) {
             item {
                 Text(
@@ -626,9 +610,7 @@ fun ArticleEditableList(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
 
-            // =========================
-            // ARTÍCULOS GUARDADOS
-            // =========================
+
             items(normalArticles) { article ->
 
                 val isSelected = selectedArticlesIdList.contains(article.id)
@@ -650,9 +632,7 @@ fun ArticleEditableList(
                 )
             }
 
-            // =========================
-            // HEADER
-            // =========================
+
             if (articlesToSave.isNotEmpty()) {
                 item {
                     Text(
@@ -666,9 +646,6 @@ fun ArticleEditableList(
                 }
             }
 
-            // =========================
-            // ARTÍCULOS PENDIENTES
-            // =========================
             items(articlesToSave) { article ->
 
                 val isSelected = selectedArticlesIdList.contains(article.id)
@@ -782,7 +759,6 @@ fun ArticleEditableItem(
                 }
             }
 
-            // 🔹 ACCIONES A LA DERECHA (separadas del contenido principal)
             Column(
                 horizontalAlignment = Alignment.End
             ) {
@@ -860,7 +836,6 @@ fun ZoneInfoTopBar(
             )
         }
 
-        // Nombre de la zona + icono de tipo
         Row(
             modifier = Modifier.align(Alignment.Center),
             verticalAlignment = Alignment.CenterVertically
@@ -874,7 +849,6 @@ fun ZoneInfoTopBar(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 🔥 BOTÓN EDITAR (LÁPIZ)
             IconButton(
                 onClick = onEditZoneName
             ) {
@@ -894,12 +868,10 @@ fun ZoneInfoTopBar(
             )
         }
 
-        // Botones de acción al final
         Row(
             modifier = Modifier.align(Alignment.CenterEnd),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón de compartir (solo si es zona compartida)
             if (isSharedZone) {
                 IconButton(onClick = onShareZone) {
                     Icon(
@@ -921,7 +893,6 @@ fun ZoneInfoTopBar(
                 }
             }
 
-            // Botón de selección de artículos (solo en página de artículos)
             if (isInArticlePage) {
                 IconButton(onClick = onToggleSelectionMode) {
                     Icon(
@@ -941,9 +912,11 @@ fun ZoneBreadcrumbs(
     uiState: ZoneInfoUiState,
     onNavigateToZone: (zoneId: String) -> Unit
 ) {
-    val zone = uiState.zone
-    val route = uiState.childZoneSummaryList
-    if (zone == null || zone.parentIdList.isNullOrEmpty()) return
+    val parents = uiState.parentZoneSummaryList
+    val current = uiState.currentZoneSummary ?: return
+    val children = uiState.childZoneSummaryList
+
+    if (parents.isEmpty() && children.isEmpty()) return
 
     Row(
         modifier = Modifier
@@ -952,28 +925,39 @@ fun ZoneBreadcrumbs(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        route.forEachIndexed { index, summary ->
+
+        parents.forEach { summary ->
             Text(
                 text = summary.name,
-                style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF1565C0),
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier
                     .padding(horizontal = 4.dp)
                     .clickable { onNavigateToZone(summary.id) }
             )
-            Text(
-                text = " < ",
-                color = Color.DarkGray,
-                style = MaterialTheme.typography.bodyMedium
-            )
+
+            Text(" < ", color = Color.DarkGray)
         }
 
         Text(
-            text = zone.name,
-            style = MaterialTheme.typography.bodyMedium,
+            text = current.name,
             color = Color.Black,
+            style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
+
+        children.forEach { child ->
+            Text(" > ", color = Color.DarkGray)
+
+            Text(
+                text = child.name,
+                color = Color(0xFF2E7D32),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .padding(horizontal = 4.dp)
+                    .clickable { onNavigateToZone(child.id) }
+            )
+        }
     }
 }
 

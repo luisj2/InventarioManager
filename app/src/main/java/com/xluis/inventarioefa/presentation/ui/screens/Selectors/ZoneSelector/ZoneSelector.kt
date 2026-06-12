@@ -56,11 +56,10 @@ fun ZoneSelectorScreen(
                 articleCountToMove = articleCountToMove
             )
         )
-    }
-
-    LaunchedEffect(Unit) {
         viewModel.onEvent(ZoneSelectorUiEvent.GetArticleById(zoneIdFromMove, articleIdToMove))
     }
+
+
 
     LaunchedEffect(
         uiState.userId,

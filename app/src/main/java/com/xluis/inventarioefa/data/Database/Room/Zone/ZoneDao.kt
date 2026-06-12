@@ -74,6 +74,12 @@ interface ZoneDao {
     suspend fun getZoneFull(zoneId: Long): ZoneWithArticlesAndMovements?
 
     @Transaction
+    @Query("SELECT * FROM Zone WHERE id = :zoneId")
+    fun getZoneFullFlow(zoneId: Long): Flow<ZoneWithArticlesAndMovements?>
+
+
+
+    @Transaction
     @Query("SELECT * FROM Zone WHERE userId = :userId OR userId = ''")
     suspend fun getAllZoneFull(userId : String): List<ZoneWithArticlesAndMovements>
 
@@ -91,6 +97,11 @@ interface ZoneDao {
     @Update
     suspend fun updateZone(zone: ZoneEntity): Int
 
+    @Query("UPDATE Zone SET parentIdList = :parents WHERE id = :zoneId")
+    suspend fun updateParentList(zoneId: Long, parents: List<Long>)
+
+    @Query("UPDATE Zone SET childIdList = :children WHERE id = :zoneId")
+    suspend fun updateChildList(zoneId: Long, children: List<Long>)
     @Query(
         """
 UPDATE article
@@ -291,31 +302,67 @@ WHERE zoneId = :zoneId AND id = :articleId
         }
     }
 
+    @Query("""
+    UPDATE article
+    SET descriptions = :descriptions
+    WHERE id = :articleId AND zoneId = :zoneId
+""")
+    suspend fun updateArticleDescriptions(
+        zoneId: Long,
+        articleId: Long,
+        descriptions: List<String>
+    ): Int
+
+    @Query("""
+    SELECT * FROM article
+    WHERE id = :articleId AND zoneId = :zoneId
+""")
+    suspend fun getArticleFromZone(
+        articleId: Long,
+        zoneId: Long
+    ): ArticleZoneEntity?
+
 
 
     @Transaction
     suspend fun updateOrDeleteArticlesAndMovements(
-        zoneId : Long,
+        zoneId: Long,
         articleId: Long,
         quantityToRemove: Int,
         movement: ArticleMovementsEntity
     ) {
-        // 1️⃣ Obtener el count actual
-        val currentArticleCount = getArticleCountById(zoneId,articleId)
 
-        if (currentArticleCount != null) {
-            // 2️⃣ Calcular la nueva cantidad
-            val newCount = currentArticleCount - quantityToRemove
+        val article = getArticleFromZone(articleId, zoneId)
 
-            // 3️⃣ Update o Delete según corresponda
+        if (article != null) {
+
+            val currentCount = article.count
+            val newCount = currentCount - quantityToRemove
+
             if (newCount > 0) {
-                updateArticleCount(zoneId,articleId, newCount)
+
+                updateArticleCount(zoneId, articleId, newCount)
+
+                val descriptions = article.descriptions.toMutableList()
+
+                val safeRemove = minOf(quantityToRemove, descriptions.size)
+
+                if (safeRemove > 0) {
+                    val updatedDescriptions = descriptions.drop(safeRemove)
+
+                    updateArticleDescriptions(
+                        zoneId = zoneId,
+                        articleId = articleId,
+                        descriptions = updatedDescriptions
+                    )
+                }
+
             } else {
+
                 deleteArticleById(zoneId, articleId)
             }
         }
 
-        // 4️⃣ Insertar el movimiento
         insertMovement(movement)
     }
 

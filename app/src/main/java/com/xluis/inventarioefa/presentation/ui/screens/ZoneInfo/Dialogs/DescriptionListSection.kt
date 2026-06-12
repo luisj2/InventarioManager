@@ -88,6 +88,8 @@ private fun DescriptionItem(
     var isEditing by remember { mutableStateOf(false) }
     var text by remember(description) { mutableStateOf(description) }
 
+    val canDelete = description.isNotBlank() && description != "Sin descripción"
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -111,7 +113,11 @@ private fun DescriptionItem(
                 )
             } else {
                 Text(
-                    text = description.ifBlank { "Sin descripción" },
+                    text = if (description.isBlank()) {
+                        "Sin descripción"
+                    } else {
+                        description
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -133,11 +139,14 @@ private fun DescriptionItem(
                 )
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null
-                )
+            // 🔥 SOLO MOSTRAR DELETE SI ES UNA DESCRIPCIÓN REAL
+            if (canDelete) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null
+                    )
+                }
             }
         }
     }

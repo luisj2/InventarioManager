@@ -188,6 +188,43 @@ class ArticleZoneFirestoreRepository(
         }
     }
 
+    override suspend fun deleteArticleDescriptionList(
+        zoneId: String,
+        articleId: String,
+        descriptionsToRemove: List<String>
+    ): SuspendResult<Boolean> {
+
+        if (descriptionsToRemove.isEmpty()) {
+            return SuspendResult.Error("La lista de descripciones está vacía")
+        }
+
+        return executeFirestoreOperation {
+
+            val articleRef = getArticleDocumentRef(zoneId, articleId)
+
+            fs.runTransaction { transaction ->
+
+                val snapshot = transaction.get(articleRef)
+                val article = snapshot.toObject(ArticleFirestore::class.java)
+                    ?: return@runTransaction false
+
+                val currentDescriptions = article.descriptions ?: emptyList()
+
+                // 🔥 ELIMINACIÓN REAL POR CONTENIDO
+                val updatedDescriptions = currentDescriptions.toMutableList().apply {
+                    descriptionsToRemove.forEach { remove(it) }
+                }
+
+                transaction.update(
+                    articleRef,
+                    FIRESTORE_ARTICLE_DESCRIPTION_FIELD,
+                    updatedDescriptions
+                )
+
+                true
+            }.await()
+        }
+    }
     override suspend fun updateArticleById(
         zoneId: String,
         articleId: String,

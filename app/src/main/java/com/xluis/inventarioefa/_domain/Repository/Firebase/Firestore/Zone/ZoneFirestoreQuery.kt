@@ -77,11 +77,20 @@ interface ZoneFirestoreQuery {
         movement: ArticleMovementFirestore
     ): SuspendResult<Boolean>
 
+    suspend fun deleteArticleDescription(
+        zoneId : String,
+        articleId : String,
+        descriptionsToDelete: List<String>
+    ) : SuspendResult<Boolean>
+
+
     //Get
 
     fun getUserZonesFlow (userId : String) : Flow<List<ZoneFirestore>>
 
     suspend fun getZoneById (zoneId : String) : SuspendResult<ZoneFirestore>
+
+    fun getFullZoneByIdFlow(zoneId: String): Flow<ZoneFullFirestore>
 
     fun getZoneByIdFlow (zoneId : String) : Flow<ZoneFirestore>
 
@@ -107,6 +116,8 @@ interface ZoneFirestoreQuery {
     suspend fun getZoneListByIdList(idList: List<String>): SuspendResult<List<ZoneFirestore>>
 
     suspend fun getFullZoneById(zoneId: String): SuspendResult<ZoneFullFirestore>
+
+    fun getMembersFlow(zoneId: String): Flow<List<String>>
 
     //Delete
 

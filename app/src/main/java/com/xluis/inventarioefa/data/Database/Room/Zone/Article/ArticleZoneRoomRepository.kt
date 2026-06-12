@@ -39,6 +39,35 @@ class ArticleZoneRoomRepository(private val dao: ArticleZoneDao) : BaseRoomRepos
         }
     }
 
+    suspend fun deleteArticleDescriptions(
+        zoneId: Long,
+        articleId: Long,
+        descriptionsToRemove: List<String>
+    ): SuspendResult<Boolean> {
+
+        if (descriptionsToRemove.isEmpty()) {
+            return SuspendResult.Error("La lista de descripciones está vacía")
+        }
+
+        return executeRoomOperation {
+
+            val article = dao.getArticleFromZone(articleId, zoneId)
+                ?: return@executeRoomOperation false
+
+            val updatedDescriptions = article.descriptions.filterNot { desc ->
+                desc in descriptionsToRemove
+            }
+
+            val rows = dao.updateArticleDescriptions(
+                articleId = articleId,
+                zoneId = zoneId,
+                descriptions = updatedDescriptions
+            )
+
+            rows > 0
+        }
+    }
+
     suspend fun upsertArticleCountList(
         zoneId: Long,
         articles: List<ArticleZoneEntity>
@@ -59,6 +88,7 @@ class ArticleZoneRoomRepository(private val dao: ArticleZoneDao) : BaseRoomRepos
             }
         }
     }
+
 
 
     suspend fun removeArticleCount(

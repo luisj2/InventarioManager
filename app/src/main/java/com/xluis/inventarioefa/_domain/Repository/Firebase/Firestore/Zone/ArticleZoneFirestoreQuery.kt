@@ -47,6 +47,12 @@ interface ArticleZoneFirestoreQuery {
         addCount: Int
     ): SuspendResult<Boolean>
 
+    suspend fun deleteArticleDescriptionList(
+        zoneId: String,
+        articleId: String,
+        descriptionsToRemove: List<String>
+    ): SuspendResult<Boolean>
+
     suspend fun changeArticleCount(
         zoneId : String,
         articleId : String,
